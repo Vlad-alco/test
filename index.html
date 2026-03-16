@@ -264,24 +264,20 @@
                     <!-- Row 2: РАСЧЕТЫ -->
                     <div class="flex gap-2 items-stretch justify-center w-full">
                         <div class="glass-card rounded-lg p-4 flex-1 flex flex-col">
-                            <h3 class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">РАСЧЕТЫ</h3>
+                            <h3 class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">РАСЧЕТЫ (расч/тек)</h3>
                             
                             <!-- ГОЛОВЫ -->
                             <div class="mb-2 border-b border-gray-700 pb-2">
                                 <div class="flex justify-between items-center">
-                                    <span class="text-gray-500 font-bold text-xs">ГОЛОВЫ: <span id="mon-head-total" class="text-amber">--</span> мл</span>
-                                    <span id="mon-head-speed" class="text-green font-bold">-- мл/ч</span>
+                                    <span class="text-gray-500 font-bold text-xs">ГОЛОВЫ: <span id="mon-head-total" class="text-amber">--</span>/<span id="mon-head-done" class="text-green">--</span> мл</span>
+                                    <span id="mon-head-speed" class="text-cyan font-bold"><span id="mon-head-speed-calc">--</span>/<span id="mon-head-speed-real" class="text-green">--</span> мл/ч</span>
                                 </div>
                                 <div class="flex justify-between text-[10px] text-gray-400 mt-1">
                                     <span>Метод: <span id="mon-head-method">--</span></span>
                                     <span>Подэтап: <span id="mon-head-substage" class="text-amber">--</span></span>
                                 </div>
                                 <div class="flex justify-between text-[10px] text-gray-400 mt-1">
-                                    <span>Скорость: <span id="mon-head-speed-calc" class="text-cyan">--</span>/<span id="mon-head-speed-real" class="text-green">--</span> мл/ч</span>
-                                    <span>(расч/тек)</span>
-                                </div>
-                                <div class="flex justify-between text-[10px] text-gray-400 mt-1">
-                                    <span>Объём: <span id="mon-head-vol">--</span>/<span id="mon-head-vol-target">--</span> мл</span>
+                                    <span>Объём подэтапа: <span id="mon-head-vol-target">--</span>/<span id="mon-head-vol" class="text-green">--</span> мл</span>
                                     <span>Время подэтапа: <span id="mon-head-remain" class="text-cyan">--:--</span></span>
                                 </div>
                             </div>
@@ -841,7 +837,6 @@
             const isRect = currentData.process == 2;
 
             // === ГОЛОВЫ ===
-            const headSpeedEl = document.getElementById('mon-head-speed');
             const headSpeedCalcEl = document.getElementById('mon-head-speed-calc');
             const headSpeedRealEl = document.getElementById('mon-head-speed-real');
             const headMethodEl = document.getElementById('mon-head-method');
@@ -850,49 +845,51 @@
             const headVolTargetEl = document.getElementById('mon-head-vol-target');
             const headRemainEl = document.getElementById('mon-head-remain');
             const headTotalEl = document.getElementById('mon-head-total');
+            const headDoneEl = document.getElementById('mon-head-done');
 
             if (stage == 'GOLOVY') {
-                // Скорости: расчётная / реальная
-                headSpeedEl.textContent = (currentData.headsSpeed || 0).toFixed(0) + " мл/ч";
+                // Скорость: расчётная / текущая
                 if (headSpeedCalcEl) headSpeedCalcEl.textContent = (currentData.headsSpeedCalc || 0).toFixed(0);
                 if (headSpeedRealEl) headSpeedRealEl.textContent = (currentData.headsSpeed || 0).toFixed(0);
                 headMethodEl.textContent = cfg.headsTypeKSS ? "Kss" : "ST";
                 headSubstageEl.textContent = currentData.rectSubStage || "--";
-                // Объём: фактически отобрано / целевой для подэтапа
-                headVolEl.textContent = (currentData.headsVolSub || 0).toFixed(1);
+                // Объём подэтапа: цель / факт
                 headVolTargetEl.textContent = currentData.headsVolTarget || "--";
+                headVolEl.textContent = (currentData.headsVolSub || 0).toFixed(1);
                 headRemainEl.textContent = formatTime(currentData.rectTimeRemaining || 0);
+                // ГОЛОВЫ: цель / факт
                 headTotalEl.textContent = currentData.headsTotalTarget || "--";
+                if (headDoneEl) headDoneEl.textContent = Math.round(currentData.headsVolDone || 0);
             } else if (stage == 'GOLOVY_OK') {
-                headSpeedEl.textContent = "-- мл/ч";
                 if (headSpeedCalcEl) headSpeedCalcEl.textContent = "--";
                 if (headSpeedRealEl) headSpeedRealEl.textContent = "--";
                 headMethodEl.textContent = cfg.headsTypeKSS ? "KSS" : "ST";
                 headSubstageEl.textContent = "ГОТОВО";
-                headVolEl.textContent = Math.round(currentData.headsVolDone || 0);
                 headVolTargetEl.textContent = "--";
+                headVolEl.textContent = "--";
                 headRemainEl.textContent = "--:--";
-                headTotalEl.textContent = currentData.headsTotalTarget || Math.round(currentData.headsVolDone || 0);
+                headTotalEl.textContent = currentData.headsTotalTarget || "--";
+                if (headDoneEl) headDoneEl.textContent = Math.round(currentData.headsVolDone || 0);
             } else if (isRect && stage == 'TELO') {
-                headSpeedEl.textContent = "-- мл/ч";
                 if (headSpeedCalcEl) headSpeedCalcEl.textContent = "--";
                 if (headSpeedRealEl) headSpeedRealEl.textContent = "--";
                 headMethodEl.textContent = cfg.headsTypeKSS ? "KSS" : "ST";
                 headSubstageEl.textContent = "ОТБРАНО";
-                headVolEl.textContent = Math.round(currentData.headsVolDone || 0);
                 headVolTargetEl.textContent = "--";
+                headVolEl.textContent = "--";
                 headRemainEl.textContent = "--:--";
-                headTotalEl.textContent = currentData.headsTotalTarget || Math.round(currentData.headsVolDone || 0);
+                headTotalEl.textContent = currentData.headsTotalTarget || "--";
+                if (headDoneEl) headDoneEl.textContent = Math.round(currentData.headsVolDone || 0);
             } else {
-                headSpeedEl.textContent = "-- мл/ч";
                 if (headSpeedCalcEl) headSpeedCalcEl.textContent = "--";
                 if (headSpeedRealEl) headSpeedRealEl.textContent = "--";
                 headMethodEl.textContent = "--";
                 headSubstageEl.textContent = "--";
-                headVolEl.textContent = "--";
                 headVolTargetEl.textContent = "--";
+                headVolEl.textContent = "--";
                 headRemainEl.textContent = "--:--";
                 headTotalEl.textContent = "--";
+                if (headDoneEl) headDoneEl.textContent = "--";
             }
 
             // === ТЕЛО ===
