@@ -4,6 +4,36 @@
 
 ---
 
+## [2025-03-16] — Сессия 14
+
+### Задача
+Добавить вывод установленной скорости отбора в монитор порта на этапах GOLOVY (для каждого подэтапа).
+
+### Решение
+Добавлена строка вывода скорости при старте каждого подэтапа GOLOVY:
+
+| Подэтап | Формат вывода |
+|---------|---------------|
+| Standard Method | `Speed: xxx.x ml/h` |
+| KSS Spit | `Speed: xx.x ml/min (full flow)` |
+| KSS Standard | `Speed: xxx.x ml/h` |
+| KSS AkaTelo | `Speed: xxx.x ml/h` |
+
+**Пример вывода:**
+```
+[GOLOVY] KSS Spit. Time: 0.40 min
+[GOLOVY] KSS Spit. Speed: 50.0 ml/min (full flow)
+...
+[GOLOVY] KSS Standard. Time: 9.00 min
+[GOLOVY] KSS Standard. Speed: 200.0 ml/h
+```
+
+### Изменённые файлы
+- **ProcessEngine.cpp**: добавлен Serial.print скорости в функциях startStandardGolovy(), startKssSpit(), startKssStandard(), startKssAkaTelo()
+- **AI_RULES.md**: добавлено главное правило (Приоритет №1), изменён репозиторий на test
+
+---
+
 ## [2025-03-14] — Сессия 13 (test)
 
 ### Исправлено

@@ -1007,6 +1007,7 @@ void ProcessEngine::startStandardGolovy(SystemConfig& cfg) {
     // ==================
     
     Serial.print("[GOLOVY] ST Method. Time: "); Serial.print(vHeadMin); Serial.println(" min");
+    Serial.print("[GOLOVY] ST Method. Speed: "); Serial.print(speedGolovy, 1); Serial.println(" ml/h");
 
     if (cfg.useHeadValve) {
         // Конфиг 1 или 2: Есть клапан голов
@@ -1055,6 +1056,7 @@ vHeadMin = headVol / cap;
     stageStartTime = millis();
 
     Serial.print("[GOLOVY] KSS Spit. Time: "); Serial.print(vHeadMin); Serial.println(" min");
+    Serial.print("[GOLOVY] KSS Spit. Speed: "); Serial.print(cap, 1); Serial.println(" ml/min (full flow)");
     // === ЛОГИРОВАНИЕ ===
     logger.log("GOLOVY: KSS Spit Start");
     logger.log("  Target Vol: " + String(headVol, 1) + " ml");
@@ -1080,6 +1082,7 @@ void ProcessEngine::startKssStandard(SystemConfig& cfg) {
     stageStartTime = millis();
 
     Serial.print("[GOLOVY] KSS Standard. Time: "); Serial.print(vHeadMin); Serial.println(" min");
+    Serial.print("[GOLOVY] KSS Standard. Speed: "); Serial.print(speedGolovy, 1); Serial.println(" ml/h");
     // === ЛОГИРОВАНИЕ ===
     logger.log("GOLOVY: KSS Standard Start");
     logger.log("  Target Vol: " + String(headVol, 1) + " ml");
@@ -1115,6 +1118,7 @@ void ProcessEngine::startKssAkaTelo(SystemConfig& cfg) {
     stageStartTime = millis();
 
     Serial.print("[GOLOVY] KSS AkaTelo. Time: "); Serial.print(vHeadMin); Serial.println(" min");
+    Serial.print("[GOLOVY] KSS AkaTelo. Speed: "); Serial.print(speedTelo, 1); Serial.println(" ml/h");
     // === ЛОГИРОВАНИЕ ===
     logger.log("GOLOVY: KSS AkaTelo Start");
     logger.log("  Target Vol: " + String(headVol, 1) + " ml");
