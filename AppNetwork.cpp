@@ -4,6 +4,7 @@
 #include "ProcessEngine.h" 
 #include "preferences.h"
 #include "SDLogger.h" // <--- Добавить эту строку
+#include "index_html_gz.h" // <-- PROGMEM index.html (gzipped)
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
@@ -83,18 +84,17 @@ void AppNetwork::begin(int checkIntervalMinutes) {
             server->send(200, "text/plain", logContent);
         });
 
-        // Главная страница
+        // Главная страница - ОБСЛУЖИВАНИЕ ИЗ PROGMEM (не SD карты!)
+        // Это устраняет блокировку Web при записи логов на SD во время аварии
         server->on("/", HTTP_GET, [this]() {
-            File file = SD.open("/www/index.html", "r");
-            if (file) {
-                server->streamFile(file, "text/html");
-                file.close();
-            } else {
-                server->send(404, "text/plain", "File Not Found: index.html");
-            }
+            // Отправляем gzipped контент с правильным заголовком
+            // Браузер автоматически распакует его
+            server->sendHeader("Content-Encoding", "gzip");
+            server->sendHeader("Cache-Control", "max-age=3600");
+            server->send_P((const char*)INDEX_HTML_GZ, INDEX_HTML_GZ_LEN, "text/html");
         });
 
-        // Статика
+        // Статика (JS, CSS файлы - остаются на SD)
         server->serveStatic("/", SD, "/www/");
 
         server->onNotFound([this]() {
@@ -186,18 +186,15 @@ bool AppNetwork::startAPMode() {
         server->send(200, "text/plain", logContent);
     });
 
-    // Главная страница
+    // Главная страница - ОБСЛУЖИВАНИЕ ИЗ PROGMEM (не SD карты!)
+    // Это устраняет блокировку Web при записи логов на SD во время аварии
     server->on("/", HTTP_GET, [this]() {
-        File file = SD.open("/www/index.html", "r");
-        if (file) {
-            server->streamFile(file, "text/html");
-            file.close();
-        } else {
-            server->send(404, "text/plain", "File Not Found: index.html");
-        }
+        server->sendHeader("Content-Encoding", "gzip");
+        server->sendHeader("Cache-Control", "max-age=3600");
+        server->send_P((const char*)INDEX_HTML_GZ, INDEX_HTML_GZ_LEN, "text/html");
     });
 
-    // Статика
+    // Статика (JS, CSS файлы - остаются на SD)
     server->serveStatic("/", SD, "/www/");
 
     server->onNotFound([this]() {
@@ -395,7 +392,8 @@ void AppNetwork::handleApiStatus() {
     json += "\"rectVolumeTarget\":" + String(status.rectVolumeTarget) + ",";
     json += "\"bodyMethodName\":\"" + status.bodyMethodName + "\",";
     json += "\"bodySpeed\":" + String(status.bodySpeed, 1) + ",";
-    json += "\"headsSpeed\":" + String(status.headsSpeed, 1) + ","; // скорость голов (отдельно от тела)
+    json += "\"headsSpeed\":" + String(status.headsSpeed, 1) + ","; // реальная скорость (по capacity)
+    json += "\"headsSpeedCalc\":" + String(status.headsSpeedCalc, 1) + ","; // расчётная скорость (для времени)
     json += "\"bodyCycle\":" + String(status.bodyCycle) + ",";
     // ===========================================================
     // === Накопленный объём голов и остаток таймера завершения ===

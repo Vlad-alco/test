@@ -927,7 +927,8 @@ void ProcessEngine::handleGolovy() {
 
     // Обновляем статус для веба
     currentStatus.headsVolDone = headsVolDone;
-    currentStatus.headsSpeed = accumSpeed;
+    currentStatus.headsSpeed = accumSpeed;        // Реальная скорость по capacity клапана
+    currentStatus.headsSpeedCalc = speedGolovy;   // Расчётная скорость для времени этапа
     currentStatus.bodySpeed = 0.0f;
     // ==============================================
     

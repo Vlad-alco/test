@@ -112,7 +112,8 @@ String testAwaitingType = "";     // "head", "body_nc", "body_no"
 
     String bodyMethodName = "";      // "Шпора" или "Стандарт"
     float bodySpeed = 0.0f;          // Текущая скорость тела (мл/час)
-    float headsSpeed = 0.0f;         // Текущая скорость голов (мл/час) — отдельно от тела
+    float headsSpeed = 0.0f;         // Реальная скорость голов (мл/час) - по capacity клапана
+    float headsSpeedCalc = 0.0f;     // Расчётная скорость голов (мл/час) - эмпирическая для времени
     float headsVolDone = 0.0f;       // Накопленный объём голов (мл)
     int bodyCycle = 0;               // Номер цикла (для Стандарта)
     // ================================================
