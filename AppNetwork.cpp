@@ -734,7 +734,7 @@ bool AppNetwork::checkInternet() {
     // === НЕБЛОКИРУЮЩАЯ проверка интернета ===
     // Таймаут 2 сек, handleClient() внутри цикла
     WiFiClient testClient;
-    testClient.setTimeout(2000);  // 2 секунды максимум
+    testClient.setTimeout(2);  // 2 СЕКУНДЫ! (не 2000 - это было бы 33 минуты!)
 
     // Пытаемся подключиться, но не блокируем надолго
     // 20 итераций по 100мс = 2 секунды

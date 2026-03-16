@@ -4,6 +4,48 @@
 
 ---
 
+## [2025-03-16] — Сессия 15
+
+### Проблема
+Web интерфейс зависает при аварии. Предыдущие "исправления" не помогли.
+
+### Анализ
+**Двухъядерная архитектура подтверждена:**
+- Core 0: Network Task (WiFi, WebServer, Telegram)
+- Core 1: loop() (датчики, процесс, кнопки, LCD)
+
+Web работает на Core 0. Если что-то блокирует Core 0 — Web зависает.
+
+### Корневая причина
+**`checkInternet()` содержал ту же ошибку, что и `sendTelegramNow()`:**
+
+```cpp
+testClient.setTimeout(2000);  // Комментарий: "2 секунды"
+```
+
+**WiFiClient::setTimeout() принимает СЕКУНДЫ, не миллисекунды!**
+- `setTimeout(2000)` = 2000 секунд = **33 минуты блокировки!**
+- `setTimeout(2)` = 2 секунды ✅
+
+**История:**
+| Сессия | Место | Было | Стало |
+|--------|-------|------|-------|
+| 12 | sendTelegramNow() | setTimeout(1) | setTimeout(2000) ❌ |
+| 13 | sendTelegramNow() | setTimeout(2000) | setTimeout(2) ✅ |
+| **ПРОБЛЕМА** | checkInternet() | setTimeout(2000) | **НЕ ИСПРАВЛЕНО** ❌ |
+
+При `checkInternet()` вызов `testClient.connect()` блокировал Core 0 до 33 минут!
+
+### Решение
+```cpp
+testClient.setTimeout(2);  // 2 СЕКУНДЫ! (не 2000!)
+```
+
+### Изменённые файлы
+- **AppNetwork.cpp**: исправлен setTimeout в checkInternet()
+
+---
+
 ## [2025-03-16] — Сессия 14
 
 ### Задача
