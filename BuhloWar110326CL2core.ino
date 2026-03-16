@@ -18,7 +18,14 @@
 #include "SDLogger.h"
 #include <RTClib.h>
 #include <esp_system.h> // Для получения причины сброса
+#include <freertos/semphr.h> // Для мьютекса SD карты
+
 SDLogger logger; // Создание глобального объекта
+
+// === ГЛОБАЛЬНЫЙ МЬЮТЕКС ДЛЯ SD КАРТЫ ===
+// Защищает SPI шину от одновременного доступа с разных ядер
+SemaphoreHandle_t sdMutex = nullptr;
+// ========================================
 
 bool needMainMenuRedraw = false;
 
@@ -53,6 +60,16 @@ void setup() {
   Serial.begin(115200);
   Serial.setDebugOutput(true);
   Serial.println("BuhloWar System v2.0");
+  
+  // === СОЗДАНИЕ МЬЮТЕКСА SD КАРТЫ (ПЕРВЫМ ДЕЛОМ!) ===
+  // Должен быть создан ДО любого обращения к SD
+  sdMutex = xSemaphoreCreateMutex();
+  if (sdMutex == nullptr) {
+      Serial.println("[ERROR] Failed to create SD mutex!");
+  } else {
+      Serial.println("[System] SD mutex created OK");
+  }
+  // =================================================
   
   // Создаём очередь команд (AppNetwork → loop)
   commandQueue = xQueueCreate(10, sizeof(CommandMessage));

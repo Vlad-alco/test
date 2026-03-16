@@ -5,10 +5,39 @@
 #include <FS.h>
 #include <SD.h>
 #include <time.h> 
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 // === ИЗМЕНЕНО: Увеличен лимит с 50 КБ до 200 КБ ===
 // 200 КБ хватит на 2-3 часа работы с детальным логом
 const unsigned long MAX_LOG_SIZE = 204800; 
+// ==================================================
+
+// === ГЛОБАЛЬНЫЙ МЬЮТЕКС ДЛЯ SD КАРТЫ ===
+// Объявлен в .ino файле, создаётся в setup()
+// Защищает SPI шину от одновременного доступа с разных ядер ESP32
+extern SemaphoreHandle_t sdMutex;
+// =======================================
+
+// === КЛАСС ДЛЯ АВТОМАТИЧЕСКОГО ЗАХВАТА МЬЮТЕКСА ===
+// При создании - захватывает мьютекс
+// При уничтожении (выход из области видимости) - освобождает
+class SDScopeLock {
+public:
+    SDScopeLock() {
+        if (sdMutex) {
+            xSemaphoreTake(sdMutex, portMAX_DELAY);
+        }
+    }
+    ~SDScopeLock() {
+        if (sdMutex) {
+            xSemaphoreGive(sdMutex);
+        }
+    }
+    // Запрещаем копирование
+    SDScopeLock(const SDScopeLock&) = delete;
+    SDScopeLock& operator=(const SDScopeLock&) = delete;
+};
 // ==================================================
 
 class SDLogger {
@@ -21,6 +50,7 @@ public:
         // === БЕЗОПАСНАЯ ПРОВЕРКА SD ===
         // Если SD ещё не проверяли - проверяем один раз
         if (!sdChecked) {
+            // Первичная проверка - без мьютекса, т.к. вызывается только из Core 1
             sdAvailable = (SD.cardSize() > 0);
             sdChecked = true;
         }
@@ -40,28 +70,39 @@ public:
         }
         // =====================================
 
-        // Формируем строку
+        // Формируем строку (это быстро, мьютекс не нужен)
         String timeStr = getTimeStr();
         String logLine = "[" + timeStr + "] " + message;
 
-        // Пишем на SD карту
-        File file = SD.open("/system.log", FILE_APPEND);
-        if (file) {
-            file.println(logLine);
-            // Обновляем счетчик размера (длина строки + 2 байта на \r\n)
-            currentFileSize += logLine.length() + 2; 
-            file.close();
+        // === КРИТИЧЕСКАЯ СЕКЦИЯ: работа с SD ===
+        {
+            SDScopeLock lock;  // Захват мьютекса (автоматически)
+            
+            // Пишем на SD карту
+            File file = SD.open("/system.log", FILE_APPEND);
+            if (file) {
+                file.println(logLine);
+                // Обновляем счетчик размера (длина строки + 2 байта на \r\n)
+                currentFileSize += logLine.length() + 2; 
+                file.close();
+            }
+            // При выходе из блока lock уничтожается -> мьютекс освобождается
         }
+        // ======================================
 
-        // Выводим в Serial
+        // Выводим в Serial (не требует мьютекса)
         Serial.println(logLine);
     }
 
     void log(const String &label, int value) { log(label + String(value)); }
     void log(const String &label, float value) { log(label + String(value, 2)); }
 
-        String readLastLog() {
+    String readLastLog() {
         if (!sdAvailable) return "SD Error";
+        
+        // === КРИТИЧЕСКАЯ СЕКЦИЯ: чтение с SD ===
+        SDScopeLock lock;  // Захват мьютекса
+        
         File file = SD.open("/system.log");
         if (!file) return "Log file not found";
         
@@ -82,6 +123,8 @@ public:
             content += (char)file.read();
         }
         file.close();
+        // При выходе lock уничтожается -> мьютекс освобождается
+        
         return content;
     }
 
@@ -107,6 +150,10 @@ private:
     }
 
     void rotateLogs() {
+        // === КРИТИЧЕСКАЯ СЕКЦИЯ: ротация логов ===
+        // Вызывается из log(), который уже держит мьютекс
+        // Поэтому здесь мьютекс НЕ захватываем повторно!
+        
         Serial.println("[Logger] Rotating logs...");
         // Удаляем самый старый
         if (SD.exists("/system5.log")) SD.remove("/system5.log");

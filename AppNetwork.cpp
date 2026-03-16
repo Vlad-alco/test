@@ -4,12 +4,14 @@
 #include "ProcessEngine.h" 
 #include "preferences.h"
 #include "SDLogger.h" // <--- Добавить эту строку
-#include "index_html_gz.h" // <-- PROGMEM index.html (gzipped)
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
+#include <freertos/semphr.h> // Для мьютекса SD
 // Подключаем внешний объект логера
 extern SDLogger logger;
+// Внешний мьютекс для SD карты (создаётся в .ino)
+extern SemaphoreHandle_t sdMutex;
 
 // === ИНИЦИАЛИЗАЦИЯ SD КАРТЫ (отдельная функция) ===
 bool AppNetwork::initSD() {
@@ -84,17 +86,25 @@ void AppNetwork::begin(int checkIntervalMinutes) {
             server->send(200, "text/plain", logContent);
         });
 
-        // Главная страница - ОБСЛУЖИВАНИЕ ИЗ PROGMEM (не SD карты!)
-        // Это устраняет блокировку Web при записи логов на SD во время аварии
+        // Главная страница - чтение с SD карты (защищено мьютексом)
         server->on("/", HTTP_GET, [this]() {
-            // Отправляем gzipped контент с правильным заголовком
-            // Браузер автоматически распакует его
-            server->sendHeader("Content-Encoding", "gzip");
-            server->sendHeader("Cache-Control", "max-age=3600");
-            server->send_P((const char*)INDEX_HTML_GZ, INDEX_HTML_GZ_LEN, "text/html");
+            // === КРИТИЧЕСКАЯ СЕКЦИЯ: чтение с SD ===
+            if (sdMutex) xSemaphoreTake(sdMutex, portMAX_DELAY);
+            
+            File file = SD.open("/www/index.html", "r");
+            if (file) {
+                server->streamFile(file, "text/html");
+                file.close();
+            } else {
+                server->send(404, "text/plain", "File Not Found: index.html");
+            }
+            
+            if (sdMutex) xSemaphoreGive(sdMutex);
+            // ========================================
         });
 
-        // Статика (JS, CSS файлы - остаются на SD)
+        // Статика (JS, CSS файлы) - serveStatic не можем защитить мьютексом,
+        // но они кэшируются браузером и загружаются редко
         server->serveStatic("/", SD, "/www/");
 
         server->onNotFound([this]() {
@@ -186,15 +196,25 @@ bool AppNetwork::startAPMode() {
         server->send(200, "text/plain", logContent);
     });
 
-    // Главная страница - ОБСЛУЖИВАНИЕ ИЗ PROGMEM (не SD карты!)
-    // Это устраняет блокировку Web при записи логов на SD во время аварии
+    // Главная страница - чтение с SD карты (защищено мьютексом)
     server->on("/", HTTP_GET, [this]() {
-        server->sendHeader("Content-Encoding", "gzip");
-        server->sendHeader("Cache-Control", "max-age=3600");
-        server->send_P((const char*)INDEX_HTML_GZ, INDEX_HTML_GZ_LEN, "text/html");
+        // === КРИТИЧЕСКАЯ СЕКЦИЯ: чтение с SD ===
+        if (sdMutex) xSemaphoreTake(sdMutex, portMAX_DELAY);
+        
+        File file = SD.open("/www/index.html", "r");
+        if (file) {
+            server->streamFile(file, "text/html");
+            file.close();
+        } else {
+            server->send(404, "text/plain", "File Not Found: index.html");
+        }
+        
+        if (sdMutex) xSemaphoreGive(sdMutex);
+        // ========================================
     });
 
-    // Статика (JS, CSS файлы - остаются на SD)
+    // Статика (JS, CSS файлы) - serveStatic не можем защитить мьютексом,
+    // но они кэшируются браузером и загружаются редко
     server->serveStatic("/", SD, "/www/");
 
     server->onNotFound([this]() {
