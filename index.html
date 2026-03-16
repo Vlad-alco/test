@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -55,8 +56,10 @@
         .status-online { animation: blink 2s infinite; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); }
-        .modal-content { background: var(--surface); border: 1px solid var(--amber-dim); padding: 24px; border-radius: 6px; width: 90%; max-width: 400px; box-shadow: 0 0 40px rgba(245,158,11,0.1); text-align: center; }
+        /* === DIALOG PANELS (вместо модалок) === */
+        .dialog-panel { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .dialog-backdrop { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(2px); }
+        .dialog-content { position: relative; z-index: 1; background: var(--surface); border: 1px solid var(--amber-dim); padding: 24px; border-radius: 6px; width: 90%; max-width: 400px; box-shadow: 0 0 40px rgba(245,158,11,0.1); text-align: center; }
 
         .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); }
         .setting-row label { font-size: 0.75rem; color: #ffffff; /* БЕЛЫЙ для яркости */ text-align: left; flex: 1; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
@@ -105,6 +108,11 @@
         
         /* Status Icons */
         .status-icon-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0.5rem; border-radius: 0.5rem; background-color: var(--bg); }
+        
+        /* Network Mode Badge */
+        .net-mode-w { background-color: rgba(74, 222, 128, 0.2); color: var(--green); border: 1px solid #14532d; }
+        .net-mode-a { background-color: rgba(245, 158, 11, 0.2); color: var(--amber); border: 1px solid #92400e; }
+        .net-mode-x { background-color: rgba(107, 114, 128, 0.2); color: var(--text-dim); border: 1px solid var(--border); }
     </style>
 </head>
 <body class="min-h-screen bg-gray-900 text-gray-200">
@@ -125,13 +133,13 @@
                         </div>
                         <!-- ИНДИКАТОР РЕЖИМА СЕТИ W/A/X -->
                         <div class="flex flex-col items-center ml-1">
-                            <div id="network-mode-badge" class="w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center bg-green-900 text-green-400">W</div>
+                            <div id="network-mode-badge" class="w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center net-mode-w">W</div>
                         </div>
                         <!-- Мини-индикаторы НАГРЕВ/МЕШАЛКА/ВОДА -->
-                        <div class="flex items-center gap-1.5 ml-1">
-                            <i data-lucide="flame" class="w-3.5 h-3.5" id="icon-heater-hdr" title="Нагрев"></i>
-                            <i data-lucide="refresh-ccw-dot" class="w-3.5 h-3.5" id="icon-mixer-hdr" title="Мешалка"></i>
-                            <i data-lucide="droplets" class="w-3.5 h-3.5" id="icon-water-hdr" title="Вода"></i>
+                        <div class="flex items-center gap-6 ml-1">
+                            <i data-lucide="flame" class="w-6 h-6" id="icon-heater-hdr" title="Нагрев"></i>
+                            <i data-lucide="refresh-ccw-dot" class="w-6 h-6" id="icon-mixer-hdr" title="Мешалка"></i>
+                            <i data-lucide="droplets" class="w-6 h-6" id="icon-water-hdr" title="Вода"></i>
                         </div>
                     </div>
                 </div>
@@ -172,9 +180,7 @@
                         <button onclick="showPage('distillation')" class="bg-gray-800 p-6 rounded-xl border border-gray-700 text-center"><i data-lucide="flask-conical" class="w-8 h-8 mx-auto mb-2 text-yellow-500"></i><div class="text-lg font-bold text-white">Дистилляция</div></button>
                         <button onclick="showPage('rectification')" class="bg-gray-800 p-6 rounded-xl border border-gray-700 text-center"><i data-lucide="funnel" class="w-8 h-8 mx-auto mb-2 text-blue-500"></i><div class="text-lg font-bold text-white">Ректификация</div></button>
                         <button onclick="showPage('sensors')" class="bg-gray-800 p-6 rounded-xl border border-gray-700 text-center"><i data-lucide="thermometer" class="w-8 h-8 mx-auto mb-2 text-teal-500"></i><div class="text-lg font-bold text-white">Датчики</div></button>
-                        <button onclick="showPage('monitoring')" class="bg-gray-800 p-6 rounded-xl border border-gray-700 text-center col-span-2 md:col-span-1">
-                            <i data-lucide="activity" class="w-8 h-8 mx-auto mb-2 text-cyan"></i>
-                            <div class="text-lg font-bold text-white">Мониторинг</div>
+                        <button onclick="showPage('monitoring')" class="bg-gray-800 p-6 rounded-xl border border-gray-700 text-center"><i data-lucide="activity" class="w-8 h-8 mx-auto mb-2 text-red-500"></i><div class="text-lg font-bold text-white">Мониторинг</div>
                         </button>
                     </div>
                 </div>
@@ -503,8 +509,8 @@
                          <div class="setting-row"><label>WIFI ЧЕК (min)</label><div class="setting-inputs"><button onclick="adjCfg('chekwifi', -1)">-</button><span id="cfg-chekwifi">5</span><button onclick="adjCfg('chekwifi', 1)">+</button></div></div>
                          <button onclick="saveSettings('general')" class="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-bold text-sm">СОХРАНИТЬ</button>
                          <div class="grid grid-cols-2 gap-2 mt-2">
-                            <button onclick="showSaveProfileModal()" class="btn-amber-outline py-2 rounded-lg font-bold text-sm">💾 СОХР. ПРОФИЛЬ</button>
-                            <button onclick="showLoadProfileModal()" class="btn-green-outline py-2 rounded-lg font-bold text-sm">📂 ЗАГР. ПРОФИЛЬ</button>
+                            <button onclick="showSaveProfilePanel()" class="btn-amber-outline py-2 rounded-lg font-bold text-sm">💾 СОХР. ПРОФИЛЬ</button>
+                            <button onclick="showLoadProfilePanel()" class="btn-green-outline py-2 rounded-lg font-bold text-sm">📂 ЗАГР. ПРОФИЛЬ</button>
                         </div>
                         <a href="/help.html" target="_blank" class="block w-full mt-2 btn-cyan-outline py-2 rounded-lg font-bold text-sm text-center">📖 ИНСТРУКЦИЯ</a>
                          <button onclick="window.open('/api/logs')" class="w-full btn-purple-outline py-2 rounded-lg font-bold text-sm">ЛОГИ</button>
@@ -515,52 +521,82 @@
         </div>
     </div>
 
-    <!-- MODALS -->
-    <div id="dialog-modal" class="modal-overlay hidden"><div class="modal-content"><h3 id="dialog-title" class="text-xl font-bold text-white mb-2"></h3><p id="dialog-text" class="text-gray-300 mb-6 text-sm"></p><div id="dialog-buttons" class="flex justify-center gap-4"></div></div></div>
-    <div id="alert-modal" class="modal-overlay hidden"><div class="modal-content"><h3 id="alert-title" class="text-xl font-bold text-yellow-400 mb-2"></h3><p id="alert-text" class="text-gray-300 mb-4 text-sm"></p><div class="flex justify-center gap-4 flex-col"><button onclick="sendCommand('NEXT_STAGE')" class="w-full bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold">ДАЛЕЕ</button><button onclick="closeAlert()" class="w-full bg-gray-600 text-white px-8 py-2 rounded-lg text-sm">Закрыть</button></div></div></div>
-    <div id="save-profile-modal" class="modal-overlay hidden">
-      <div class="modal-content">
-        <h3 class="text-xl font-bold text-white mb-4">СОЗДАТЬ ПРОФИЛЬ</h3>
-        <p class="text-gray-400 text-sm mb-3">Введите имя профиля:</p>
-        <input id="profile-name-input" type="text" maxlength="30" class="w-full bg-gray-700 text-white text-center text-lg rounded-lg p-2 mb-4 border border-gray-600" placeholder="Например: Дист Яблоко" />
-        <div class="grid grid-cols-2 gap-2">
-          <button onclick="document.getElementById('save-profile-modal').classList.add('hidden')" class="bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg font-bold text-sm">ОТМЕНА</button>
-          <button onclick="saveProfile()" class="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-bold text-sm">СОХРАНИТЬ</button>
+    <!-- === DIALOG PANELS (вместо модалок) === -->
+    
+    <!-- Dialog Panel - универсальный диалог -->
+    <div id="dialog-panel" class="dialog-panel">
+        <div class="dialog-backdrop" onclick="closeDialogPanel()"></div>
+        <div class="dialog-content">
+            <h3 id="dialog-title" class="text-xl font-bold text-white mb-2"></h3>
+            <p id="dialog-text" class="text-gray-300 mb-6 text-sm"></p>
+            <div id="dialog-buttons" class="flex justify-center gap-4"></div>
         </div>
-      </div>
     </div>
-    <div id="load-profile-modal" class="modal-overlay hidden">
-      <div class="modal-content">
-        <h3 class="text-xl font-bold text-white mb-4">ЗАГРУЗИТЬ ПРОФИЛЬ</h3>
-        <div id="profile-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto"></div>
-        <p id="profile-list-empty" class="text-gray-500 text-sm text-center mb-4 hidden">Профили не найдены</p>
-        <button onclick="document.getElementById('load-profile-modal').classList.add('hidden')" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg font-bold text-sm">ЗАКРЫТЬ</button>
-      </div>
+    
+    <!-- Alert Panel - тревога -->
+    <div id="alert-panel" class="dialog-panel">
+        <div class="dialog-backdrop"></div>
+        <div class="dialog-content">
+            <h3 id="alert-title" class="text-xl font-bold text-yellow-400 mb-2"></h3>
+            <p id="alert-text" class="text-gray-300 mb-4 text-sm"></p>
+            <div class="flex justify-center gap-4 flex-col">
+                <button onclick="sendCommand('NEXT_STAGE');closeAlertPanel()" class="w-full bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold">ДАЛЕЕ</button>
+                <button onclick="closeAlertPanel()" class="w-full bg-gray-600 text-white px-8 py-2 rounded-lg text-sm">Закрыть</button>
+            </div>
+        </div>
     </div>
-    <div id="calc-modal" class="modal-overlay hidden">
-      <div class="modal-content">
-        <h3 class="text-xl font-bold text-white mb-1">РЕЗУЛЬТАТ ТЕСТА</h3>
-        <p id="calc-modal-subtitle" class="text-gray-400 text-xs mb-1"></p>
-        <p class="text-yellow-600 text-xs mb-4">⚠ Тайминги подбираются под скорость 50 головы и 500 тело мл/ч при 1 кВт.</p>
-        <div id="calc-input-block">
-          <p class="text-gray-300 text-sm mb-2">Сколько мл набралось?</p>
-          <input id="calc-ml-input" type="number" min="0.1" step="0.1" class="w-full bg-gray-700 text-white text-center text-lg rounded-lg p-2 mb-4 border border-gray-600" placeholder="мл" />
-          <button onclick="submitCalcValve()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold text-sm">РАССЧИТАТЬ</button>
+    
+    <!-- Save Profile Panel -->
+    <div id="save-profile-panel" class="dialog-panel">
+        <div class="dialog-backdrop" onclick="closeSaveProfilePanel()"></div>
+        <div class="dialog-content">
+            <h3 class="text-xl font-bold text-white mb-4">СОЗДАТЬ ПРОФИЛЬ</h3>
+            <p class="text-gray-400 text-sm mb-3">Введите имя профиля:</p>
+            <input id="profile-name-input" type="text" maxlength="30" class="w-full bg-gray-700 text-white text-center text-lg rounded-lg p-2 mb-4 border border-gray-600" placeholder="Например: Дист Яблоко" />
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="closeSaveProfilePanel()" class="bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg font-bold text-sm">ОТМЕНА</button>
+                <button onclick="saveProfile()" class="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-bold text-sm">СОХРАНИТЬ</button>
+            </div>
         </div>
-        <div id="calc-result-block" class="hidden">
-          <div class="bg-gray-700 rounded-lg p-3 mb-3 text-sm">
-            <p class="text-gray-400">Расход клапана:</p>
-            <p class="text-white font-bold text-lg"><span id="calc-capacity">--</span> мл/мин</p>
-            <p class="text-gray-400 mt-2">Скорость отбора:</p>
-            <p class="text-white font-bold text-lg"><span id="calc-speed">--</span> мл/ч</p>
-            <p class="text-gray-400 mt-1">Цель: <span id="calc-target">--</span> мл/ч</p>
-            <p id="calc-verdict" class="font-bold mt-2"></p>
-            <p class="text-gray-500 text-xs mt-2">Время открыт: <span id="calc-opened">--</span> сек из <span id="calc-total">--</span> сек</p>
-          </div>
-          <p class="text-green-400 text-xs mb-3">✓ Расход сохранён в настройки</p>
-          <button onclick="hideCalcModal()" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg font-bold text-sm">ЗАКРЫТЬ</button>
+    </div>
+    
+    <!-- Load Profile Panel -->
+    <div id="load-profile-panel" class="dialog-panel">
+        <div class="dialog-backdrop" onclick="closeLoadProfilePanel()"></div>
+        <div class="dialog-content">
+            <h3 class="text-xl font-bold text-white mb-4">ЗАГРУЗИТЬ ПРОФИЛЬ</h3>
+            <div id="profile-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto"></div>
+            <p id="profile-list-empty" class="text-gray-500 text-sm text-center mb-4 hidden">Профили не найдены</p>
+            <button onclick="closeLoadProfilePanel()" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg font-bold text-sm">ЗАКРЫТЬ</button>
         </div>
-      </div>
+    </div>
+    
+    <!-- Calc Panel - расчёт клапана -->
+    <div id="calc-panel" class="dialog-panel">
+        <div class="dialog-backdrop" onclick="closeCalcPanel()"></div>
+        <div class="dialog-content">
+            <h3 class="text-xl font-bold text-white mb-1">РЕЗУЛЬТАТ ТЕСТА</h3>
+            <p id="calc-modal-subtitle" class="text-gray-400 text-xs mb-1"></p>
+            <p class="text-yellow-600 text-xs mb-4">⚠ Тайминги подбираются под скорость 50 головы и 500 тело мл/ч при 1 кВт.</p>
+            <div id="calc-input-block">
+                <p class="text-gray-300 text-sm mb-2">Сколько мл набралось?</p>
+                <input id="calc-ml-input" type="number" min="0.1" step="0.1" class="w-full bg-gray-700 text-white text-center text-lg rounded-lg p-2 mb-4 border border-gray-600" placeholder="мл" />
+                <button onclick="submitCalcValve()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold text-sm">РАССЧИТАТЬ</button>
+            </div>
+            <div id="calc-result-block" class="hidden">
+                <div class="bg-gray-700 rounded-lg p-3 mb-3 text-sm">
+                    <p class="text-gray-400">Расход клапана:</p>
+                    <p class="text-white font-bold text-lg"><span id="calc-capacity">--</span> мл/мин</p>
+                    <p class="text-gray-400 mt-2">Скорость отбора:</p>
+                    <p class="text-white font-bold text-lg"><span id="calc-speed">--</span> мл/ч</p>
+                    <p class="text-gray-400 mt-1">Цель: <span id="calc-target">--</span> мл/ч</p>
+                    <p id="calc-verdict" class="font-bold mt-2"></p>
+                    <p class="text-gray-500 text-xs mt-2">Время открыт: <span id="calc-opened">--</span> сек из <span id="calc-total">--</span> сек</p>
+                </div>
+                <p class="text-green-400 text-xs mb-3">✓ Расход сохранён в настройки</p>
+                <button onclick="closeCalcPanel()" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg font-bold text-sm">ЗАКРЫТЬ</button>
+            </div>
+        </div>
     </div>
     
     <script>
@@ -572,6 +608,7 @@
         let currentPage = 'main';
         let configDirty = false; 
         let userClosedSetPwAs = false;
+        let lastStage = '';
         
         // === АНИМАЦИЯ ===
         let gaugeAnimationId = null;
@@ -603,10 +640,11 @@
                 currentData.str_bak_valid = newData.str_bak_valid;
                 currentData.str_out_valid = newData.str_out_valid;
                 currentData.pressure = newData.pressure;
-                currentData.box_temp = newData.box_temp; // Температура бокса
-                currentData.humidity = newData.humidity; // Влажность
+                currentData.box_temp = newData.box_temp;
+                currentData.humidity = newData.humidity;
                 currentData.online = newData.online;
                 currentData.power = newData.power;
+                currentData.network_mode = newData.network_mode || 'X';  // Режим сети W/A/X
                 
                 currentData.alarmTimerSec = newData.alarmTimerSec;
                 currentData.rectMethodName = newData.rectMethodName;
@@ -663,13 +701,13 @@
             if (netBadge) {
                 const mode = currentData.network_mode || 'X';
                 netBadge.textContent = mode;
-                // Цвета: W=зелёный, A=жёлтый, X=серый
+                netBadge.className = 'w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center ';
                 if (mode === 'W') {
-                    netBadge.className = 'w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center bg-green-900 text-green-400';
+                    netBadge.className += 'net-mode-w';
                 } else if (mode === 'A') {
-                    netBadge.className = 'w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center bg-yellow-900 text-yellow-400';
+                    netBadge.className += 'net-mode-a';
                 } else {
-                    netBadge.className = 'w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center bg-gray-700 text-gray-400';
+                    netBadge.className += 'net-mode-x';
                 }
             }
             // ====================================
@@ -679,16 +717,12 @@
             document.getElementById('power-display').textContent = currentData.power || 0;
             
             // === ШАПКА: Температура и Влажность ===
-            // Температура: Текущая (оранжевый) / Макс (серый)
             const boxMax = currentData.cfg ? currentData.cfg.boxMaxTemp : '--';
             document.getElementById('box-temp-value').textContent = (currentData.box_temp || 0).toFixed(0);
             document.getElementById('box-temp-max').textContent = boxMax;
-            
-            // Влажность
             document.getElementById('humidity-value').textContent = (currentData.humidity || 0).toFixed(0);
             // =====================================
             
-            // Мини-индикаторы в шапке (работают на всех страницах)
             updateHeaderIcons();
             
             const isRunning = (currentData.process == 1 || currentData.process == 2);
@@ -772,20 +806,16 @@
             document.getElementById('center-time-val').textContent = formatTime(currentData.time || 0);
             updateCalculationsBlock();
 
-            // Давление
             document.getElementById('press-val-m').textContent = Math.round(currentData.pressure || 760);
             
-            // === ИСПРАВЛЕНО: Поправка с +/- и цветом ===
             let pressCorr = ((currentData.pressure || 760) - 760) * 0.037;
             let pressCorrText = (pressCorr >= 0 ? "+" : "") + pressCorr.toFixed(2);
             const pressCorrEl = document.getElementById('press-corr-m');
             pressCorrEl.textContent = pressCorrText;
-            pressCorrEl.style.color = "var(--amber)"; // Оранжевый всегда
-            // =========================================
+            pressCorrEl.style.color = "var(--amber)";
             
             if (!gaugeAnimating) updateBarometer(currentData.pressure || 760);
 
-            // Температуры
             document.getElementById('val-tsa-m').textContent = currentData.tsa ? currentData.tsa.toFixed(1) : '--';
             document.getElementById('val-tsar-m').textContent = currentData.tsar ? currentData.tsar.toFixed(1) : '--';
             document.getElementById('val-tank-m').textContent = currentData.tank ? currentData.tank.toFixed(1) : '--';
@@ -814,7 +844,7 @@
 
             if (stage == 'GOLOVY') {
                 headSpeedEl.textContent = (currentData.headsSpeed || 0) + " мл/ч";
-                headMethodEl.textContent = cfg.headsTypeKSS ? "KSS" : "ST";
+                headMethodEl.textContent = cfg.headsTypeKSS ? "Kss" : "ST";
                 headSubstageEl.textContent = currentData.rectSubStage || "--";
                 headVolEl.textContent = Math.round(currentData.headsVolDone || 0);
                 headVolTargetEl.textContent = currentData.rectVolumeTarget || "--";
@@ -829,7 +859,6 @@
                 headRemainEl.textContent = "--:--";
                 headTotalEl.textContent = currentData.headsTotalTarget || Math.round(currentData.headsVolDone || 0);
             } else if (isRect && stage == 'TELO') {
-                // На этапе TELO показываем итоговые данные по головам
                 headSpeedEl.textContent = "-- мл/ч";
                 headMethodEl.textContent = cfg.headsTypeKSS ? "KSS" : "ST";
                 headSubstageEl.textContent = "ОТБРАНО";
@@ -857,7 +886,6 @@
             if (stage == 'TELO') {
                 bodySpeedEl.textContent = (currentData.bodySpeed || 0) + " мл/ч";
                 bodyMethodEl.textContent = currentData.bodyMethodName || "--";
-                // Цикл: для Шпоры не показываем (counter=0), для Стандарта показываем текущий/максимум
                 let cycleVal = currentData.bodyCycle || 0;
                 let cycleLim = cfg.cycleLim || 1;
                 if (currentData.bodyMethodName == "Шпора" || cycleVal == 0) {
@@ -881,13 +909,11 @@
             }
 
             // === КРЕПОСТЬ И РЕФЕРЕНТНЫЕ ===
-            // Крепость показываем только если валидна (температура >= 78.5°C)
             const strBakValid = currentData.str_bak_valid === true;
             const strOutValid = currentData.str_out_valid === true;
             document.getElementById('mon-abv-tank').textContent = strBakValid ? (currentData.str_bak || '--') : '--';
             document.getElementById('mon-abv-out').textContent = strOutValid ? (currentData.str_out || '--') : '--';
             
-            // Референтные TSAR и АД (показываем только после сохранения, т.е. когда > 0)
             const rtsarM = currentData.rtsarM || 0;
             const adPressM = currentData.adPressM || 0;
             document.getElementById('mon-ref-tsar').textContent = rtsarM > 0 ? rtsarM.toFixed(2) : '--';
@@ -895,15 +921,10 @@
         }
 
         function updateHeaderIcons() {
-            // === НАГРЕВ (мини-иконка в шапке) ===
             const hHdr = document.getElementById('icon-heater-hdr');
             if (hHdr) hHdr.style.color = currentData.heaterOn ? "var(--amber)" : "var(--text-dim)";
-
-            // === МЕШАЛКА (мини-иконка в шапке) ===
             const mHdr = document.getElementById('icon-mixer-hdr');
             if (mHdr) mHdr.style.color = currentData.mixerOn ? "var(--green)" : "var(--text-dim)";
-
-            // === ВОДА (мини-иконка в шапке) ===
             const wHdr = document.getElementById('icon-water-hdr');
             if (wHdr) wHdr.style.color = currentData.waterValveOpen ? "var(--cyan)" : "var(--text-dim)";
         }
@@ -1119,7 +1140,7 @@
                 document.getElementById('body-test-time').textContent = `${tot - rem} / ${tot} с`;
                 document.getElementById('body-test-bar').style.width = ((tot - rem) / tot * 100) + '%';
             } else { bodyProg.classList.add('hidden'); }
-            if (currentData.testAwaitingInput && !document.getElementById('calc-modal').classList.contains('active')) { showCalcModal(currentData.testAwaitingType); }
+            if (currentData.testAwaitingInput && document.getElementById('calc-panel').style.display !== 'flex') { showCalcPanel(currentData.testAwaitingType); }
         }
 
         function updateDistPage() {
@@ -1128,7 +1149,6 @@
             document.getElementById('dist-aqua').textContent = currentData.aqua ? currentData.aqua.toFixed(2) : '--';
             document.getElementById('dist-tank').textContent = currentData.tank ? currentData.tank.toFixed(2) : '--';
             document.getElementById('dist-stage').textContent = currentData.stage || '--';
-            // Крепость показываем только если валидна (температура >= 78.5°C)
             document.getElementById('dist-str-bak').textContent = currentData.str_bak_valid ? (currentData.str_bak || '--') : '--';
             document.getElementById('dist-str-out').textContent = currentData.str_out_valid ? (currentData.str_out || '--') : '--';
         }
@@ -1227,56 +1247,59 @@
         function checkModals() {
             if (typeof currentData === 'undefined' || !currentData.stage) return;
             const stage = currentData.stage;
-            const dModal = document.getElementById('dialog-modal');
-            const aModal = document.getElementById('alert-modal');
-            if (!dModal || !aModal) return;
-            aModal.classList.add('hidden');
+            const dPanel = document.getElementById('dialog-panel');
+            const aPanel = document.getElementById('alert-panel');
+            if (!dPanel || !aPanel) return;
+            aPanel.style.display = 'none';
 
-            // Сбрасываем флаг закрытия если процесс не запущен (новый запуск)
             if (currentData.process == 0 || stage === 'IDLE') {
                 userClosedSetPwAs = false;
             }
+            if (lastStage === 'SET_PW_AS' && stage !== 'SET_PW_AS') {
+                userClosedSetPwAs = false;
+            }
+            lastStage = stage;
 
             if (currentData.webCalibStatus && currentData.webCalibStatus > 0) {
                 const ws = currentData.webCalibStatus;
-                dModal.classList.remove('hidden');
+                dPanel.style.display = 'flex';
                 const sensorName = currentData.webCalibSensorName || "";
                 if (ws == 1) {
                     document.getElementById('dialog-title').textContent = "КАЛИБРОВКА " + sensorName;
                     document.getElementById('dialog-text').textContent = "Грейте датчик " + sensorName + "...";
-                    document.getElementById('dialog-buttons').innerHTML = '<button onclick="sendCommand(\'DIALOG_NO\');closeDialogModal()" class="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg font-bold">ОТМЕНА</button>';
+                    document.getElementById('dialog-buttons').innerHTML = '<button onclick="sendCommand(\'DIALOG_NO\');closeDialogPanel()" class="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg font-bold">ОТМЕНА</button>';
                     return;
                 } else if (ws == 2) {
                     document.getElementById('dialog-title').textContent = "✓ ДАТЧИК НАЙДЕН";
                     document.getElementById('dialog-text').textContent = "Датчик " + sensorName + " определён. Адрес сохранён.";
-                    document.getElementById('dialog-buttons').innerHTML = '<button onclick="sendCommand(\'DIALOG_YES\');closeDialogModal()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold">ОК</button>';
+                    document.getElementById('dialog-buttons').innerHTML = '<button onclick="sendCommand(\'DIALOG_YES\');closeDialogPanel()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold">ОК</button>';
                     return;
                 } else if (ws == 3) {
                     document.getElementById('dialog-title').textContent = "✗ НЕ НАЙДЕН";
                     document.getElementById('dialog-text').textContent = "Не удалось определить нагреваемый датчик " + sensorName + ".";
-                    document.getElementById('dialog-buttons').innerHTML = '<button onclick="sendCommand(\'DIALOG_YES\');closeDialogModal()" class="bg-gray-600 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-bold">ОК</button>';
+                    document.getElementById('dialog-buttons').innerHTML = '<button onclick="sendCommand(\'DIALOG_YES\');closeDialogPanel()" class="bg-gray-600 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-bold">ОК</button>';
                     return;
                 }
 }
 
             if (stage === 'WATER_TEST') { 
-                dModal.classList.remove('hidden');
+                dPanel.style.display = 'flex';
                 document.getElementById('dialog-title').textContent = 'ТЕСТ ВОДЫ';
                 document.getElementById('dialog-text').textContent = 'Вода течет? Все герметично?';
                 document.getElementById('dialog-buttons').innerHTML = '<button onclick="sendDialog(\'DIALOG_YES\')" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold">ДА</button><button onclick="sendDialog(\'DIALOG_NO\')" class="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg font-bold">НЕТ</button>';
             } else if (stage === 'REPLACEMENT') {
-                dModal.classList.remove('hidden');
+                dPanel.style.display = 'flex';
                 document.getElementById('dialog-title').textContent = 'СМЕНА ПОСУДЫ';
                 document.getElementById('dialog-text').textContent = 'Замените тару и продолжите?';
                 document.getElementById('dialog-buttons').innerHTML = '<button onclick="sendDialog(\'DIALOG_YES\')" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold">ДА</button><button onclick="sendDialog(\'DIALOG_NO\')" class="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg font-bold">НЕТ</button>';
             } else if (stage === 'GOLOVY_OK') { 
-                dModal.classList.remove('hidden');
+                dPanel.style.display = 'flex';
                 document.getElementById('dialog-title').textContent = 'ГОЛОВЫ';
                 document.getElementById('dialog-text').textContent = 'Головы отобраны. Перейти к телу?';
                 document.getElementById('dialog-buttons').innerHTML = '<button onclick="sendDialog(\'DIALOG_YES\')" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold">ДА</button>';
             } 
              else if (stage === 'SET_PW_AS' && !userClosedSetPwAs) { 
-                dModal.classList.remove('hidden');
+                dPanel.style.display = 'flex';
                 document.getElementById('dialog-title').textContent = 'НАСТРОЙКА ПАРАМЕТРОВ';
                 
                 let p = currentData.cfg ? currentData.cfg.power : '??';
@@ -1291,27 +1314,31 @@
                     '</div>';
                 
                 document.getElementById('dialog-buttons').innerHTML = 
-                    '<button onclick="closeDialogModal()" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-bold">ОТМЕНА</button>' +
+                    '<button onclick="closeSetPwAsPanel()" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-bold">ОТМЕНА</button>' +
                     '<button onclick="sendCommand(\'NEXT_STAGE\')" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold">ДАЛЕЕ</button>';
             }
             else {
-                dModal.classList.add('hidden');
+                dPanel.style.display = 'none';
             }
         }
         
-        function closeDialogModal() {
-            document.getElementById('dialog-modal').classList.add('hidden');
+        function closeDialogPanel() {
+            document.getElementById('dialog-panel').style.display = 'none';
+        }
+        
+        function closeSetPwAsPanel() {
+            document.getElementById('dialog-panel').style.display = 'none';
             userClosedSetPwAs = true;
         }
         
-        function closeAlert() { document.getElementById('alert-modal').classList.add('hidden'); }
+        function closeAlertPanel() { document.getElementById('alert-panel').style.display = 'none'; }
 
         async function sendCommand(cmd) {
             console.log('Send Cmd:', cmd);
             try { await fetch(API_COMMAND, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cmd: cmd }) }); syncData(); } catch (e) {}
         }
         
-        function sendDialog(resp) { sendCommand(resp); closeDialogModal(); }
+        function sendDialog(resp) { sendCommand(resp); closeDialogPanel(); }
         
         function toggleCurrentProcess() {
             const isRunning = (currentData.process == 1 || currentData.process == 2);
@@ -1355,9 +1382,9 @@
         }
 
         function startSensorCalib(sensor) { sendCommand('IDENTIFY_' + sensor); }
-        function confirmSensorCalib(save) { sendCommand(save ? 'DIALOG_YES' : 'DIALOG_NO'); closeDialogModal(); }
-        function cancelSensorCalib() { closeDialogModal(); }
-        function dismissCalibError() { sendCommand('DIALOG_NO'); closeDialogModal(); }
+        function confirmSensorCalib(save) { sendCommand(save ? 'DIALOG_YES' : 'DIALOG_NO'); closeDialogPanel(); }
+        function cancelSensorCalib() { closeDialogPanel(); }
+        function dismissCalibError() { sendCommand('DIALOG_NO'); closeDialogPanel(); }
         function runValveTest(type) { sendCommand(type === 'head' ? 'TEST_HEAD' : 'TEST_BODY'); }
         function stopValveTest() { sendCommand('STOP_TEST'); }
         function completeCalibration() { sendCommand('FINISH_CALIBRATION'); }
@@ -1387,139 +1414,148 @@
         
         let calcModalType = '';
 
-function showCalcModal(type) {
-    calcModalType = type;
-    const modal = document.getElementById('calc-modal');
-    const sub = document.getElementById('calc-modal-subtitle');
-    const inputBlock = document.getElementById('calc-input-block');
-    const resultBlock = document.getElementById('calc-result-block');
+        function showCalcPanel(type) {
+            calcModalType = type;
+            const panel = document.getElementById('calc-panel');
+            const sub = document.getElementById('calc-modal-subtitle');
+            const inputBlock = document.getElementById('calc-input-block');
+            const resultBlock = document.getElementById('calc-result-block');
 
-    const labels = {
-        'head':    'Клапан ГОЛОВ',
-        'body_nc': 'Клапан ТЕЛА (НЗ)',
-        'body_no': 'Клапан ТЕЛА (НО)'
-    };
-    sub.textContent = labels[type] || type;
+            const labels = {
+                'head':    'Клапан ГОЛОВ',
+                'body_nc': 'Клапан ТЕЛА (НЗ)',
+                'body_no': 'Клапан ТЕЛА (НО)'
+            };
+            sub.textContent = labels[type] || type;
 
-    inputBlock.classList.remove('hidden');
-    resultBlock.classList.add('hidden');
-    document.getElementById('calc-ml-input').value = '';
-    modal.classList.remove('hidden');
-    modal.classList.add('active');
-}
-
-function hideCalcModal() {
-    const modal = document.getElementById('calc-modal');
-    modal.classList.add('hidden');
-    modal.classList.remove('active');
-}
-
-async function submitCalcValve() {
-    const ml = parseFloat(document.getElementById('calc-ml-input').value);
-    if (!ml || ml <= 0) { alert('Введите количество мл'); return; }
-
-    try {
-        const resp = await fetch('/api/calcvalve', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: calcModalType, ml: ml })
-        });
-        const data = await resp.json();
-
-        const target = calcModalType === 'head' ? 50 : 500;
-const speed = data.speed;
-const diff = ((speed - target) / target) * 100;
-
-document.getElementById('calc-capacity').textContent = data.capacity.toFixed(1);
-document.getElementById('calc-speed').textContent    = speed.toFixed(1);
-document.getElementById('calc-target').textContent   = target;
-document.getElementById('calc-opened').textContent   = data.openedSec;
-document.getElementById('calc-total').textContent    = currentData.cfg ? currentData.cfg.active_test : '--';
-
-const verdict = document.getElementById('calc-verdict');
-if (Math.abs(diff) <= 1) {
-    verdict.textContent = '✓ Попадание в норму (±1%)';
-    verdict.className = 'font-bold mt-2 text-green-400';
-} else if (speed < target) {
-    verdict.textContent = '↑ Мало — увеличьте ОТКРЫТ или уменьшите ЗАКРЫТ (' + diff.toFixed(1) + '%)';
-    verdict.className = 'font-bold mt-2 text-orange-400';
-} else {
-    verdict.textContent = '↓ Много — уменьшите ОТКРЫТ или увеличьте ЗАКРЫТ (+' + diff.toFixed(1) + '%)';
-    verdict.className = 'font-bold mt-2 text-orange-400';
-}
-
-        document.getElementById('calc-input-block').classList.add('hidden');
-        document.getElementById('calc-result-block').classList.remove('hidden');
-
-        syncData();
-    } catch(e) { alert('Ошибка расчёта: ' + e); }
-}
-
-async function showSaveProfileModal() {
-    document.getElementById('profile-name-input').value = '';
-    document.getElementById('save-profile-modal').classList.remove('hidden');
-}
-
-async function saveProfile() {
-    const name = document.getElementById('profile-name-input').value.trim();
-    if (!name) { alert('Введите имя профиля'); return; }
-    
-    try {
-        const resp = await fetch('/api/saveprofile', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: name })
-        });
-        if (resp.ok) {
-            document.getElementById('save-profile-modal').classList.add('hidden');
-            alert('Профиль "' + name + '" сохранён');
-        } else { alert('Ошибка сохранения'); }
-    } catch(e) { alert('Ошибка: ' + e); }
-}
-
-async function showLoadProfileModal() {
-    const listEl   = document.getElementById('profile-list');
-    const emptyEl  = document.getElementById('profile-list-empty');
-    listEl.innerHTML = '<p class="text-gray-400 text-sm text-center">Загрузка...</p>';
-    document.getElementById('load-profile-modal').classList.remove('hidden');
-    
-    try {
-        const resp = await fetch('/api/listprofiles');
-        const profiles = await resp.json();
-        listEl.innerHTML = '';
-        
-        if (profiles.length === 0) { emptyEl.classList.remove('hidden'); } 
-        else {
-            emptyEl.classList.add('hidden');
-            profiles.forEach(p => {
-                const btn = document.createElement('button');
-                btn.className = 'w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded-lg text-sm text-left';
-                btn.textContent = p.name;
-                btn.onclick = () => loadProfile(p.file, p.name);
-                listEl.appendChild(btn);
-            });
+            inputBlock.classList.remove('hidden');
+            resultBlock.classList.add('hidden');
+            document.getElementById('calc-ml-input').value = '';
+            panel.style.display = 'flex';
         }
-    } catch(e) {
-        listEl.innerHTML = '<p class="text-red-400 text-sm text-center">Ошибка загрузки списка</p>';
-    }
-}
 
-async function loadProfile(fileKey, name) {
-    if (!confirm('Загрузить профиль "' + name + '"?\nТекущие настройки будут заменены.')) return;
+        function closeCalcPanel() {
+            document.getElementById('calc-panel').style.display = 'none';
+        }
+
+        async function submitCalcValve() {
+            const ml = parseFloat(document.getElementById('calc-ml-input').value);
+            if (!ml || ml <= 0) { alert('Введите количество мл'); return; }
+
+            try {
+                const resp = await fetch('/api/calcvalve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: calcModalType, ml: ml })
+                });
+                const data = await resp.json();
+
+                const target = calcModalType === 'head' ? 50 : 500;
+                const speed = data.speed;
+                const diff = ((speed - target) / target) * 100;
+
+                document.getElementById('calc-capacity').textContent = data.capacity.toFixed(1);
+                document.getElementById('calc-speed').textContent    = speed.toFixed(1);
+                document.getElementById('calc-target').textContent   = target;
+                document.getElementById('calc-opened').textContent   = data.openedSec;
+                document.getElementById('calc-total').textContent    = currentData.cfg ? currentData.cfg.active_test : '--';
+
+                const verdict = document.getElementById('calc-verdict');
+                if (Math.abs(diff) <= 1) {
+                    verdict.textContent = '✓ Попадание в норму (±1%)';
+                    verdict.className = 'font-bold mt-2 text-green-400';
+                } else if (speed < target) {
+                    verdict.textContent = '↑ Мало — увеличьте ОТКРЫТ или уменьшите ЗАКРЫТ (' + diff.toFixed(1) + '%)';
+                    verdict.className = 'font-bold mt-2 text-orange-400';
+                } else {
+                    verdict.textContent = '↓ Много — уменьшите ОТКРЫТ или увеличьте ЗАКРЫТ (+' + diff.toFixed(1) + '%)';
+                    verdict.className = 'font-bold mt-2 text-orange-400';
+                }
+
+                document.getElementById('calc-input-block').classList.add('hidden');
+                document.getElementById('calc-result-block').classList.remove('hidden');
+
+                syncData();
+            } catch(e) { alert('Ошибка расчёта: ' + e); }
+        }
+
+        function showSaveProfilePanel() {
+            document.getElementById('profile-name-input').value = '';
+            document.getElementById('save-profile-panel').style.display = 'flex';
+        }
+
+        function closeSaveProfilePanel() {
+            document.getElementById('save-profile-panel').style.display = 'none';
+        }
+
+        async function saveProfile() {
+            const name = document.getElementById('profile-name-input').value.trim();
+            if (!name) { alert('Введите имя профиля'); return; }
     
-    try {
-        const resp = await fetch('/api/loadprofile', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ file: fileKey })
-        });
-        if (resp.ok) {
-            document.getElementById('load-profile-modal').classList.add('hidden');
-            alert('Профиль "' + name + '" загружен');
-            syncData();
-        } else { alert('Ошибка загрузки профиля'); }
-    } catch(e) { alert('Ошибка: ' + e); }
-}
+            try {
+                const resp = await fetch('/api/saveprofile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name })
+                });
+                if (resp.ok) {
+                    closeSaveProfilePanel();
+                    alert('Профиль "' + name + '" сохранён');
+                } else { alert('Ошибка сохранения'); }
+            } catch(e) { alert('Ошибка: ' + e); }
+        }
+
+        function showLoadProfilePanel() {
+            const listEl   = document.getElementById('profile-list');
+            const emptyEl  = document.getElementById('profile-list-empty');
+            listEl.innerHTML = '<p class="text-gray-400 text-sm text-center">Загрузка...</p>';
+            document.getElementById('load-profile-panel').style.display = 'flex';
+            
+            try {
+                fetch('/api/listprofiles')
+                    .then(r => r.json())
+                    .then(profiles => {
+                        listEl.innerHTML = '';
+                        if (profiles.length === 0) { emptyEl.classList.remove('hidden'); } 
+                        else {
+                            emptyEl.classList.add('hidden');
+                            profiles.forEach(p => {
+                                const btn = document.createElement('button');
+                                btn.className = 'w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded-lg text-sm text-left';
+                                btn.textContent = p.name;
+                                btn.onclick = () => loadProfile(p.file, p.name);
+                                listEl.appendChild(btn);
+                            });
+                        }
+                    })
+                    .catch(() => {
+                        listEl.innerHTML = '<p class="text-red-400 text-sm text-center">Ошибка загрузки списка</p>';
+                    });
+            } catch(e) {
+                listEl.innerHTML = '<p class="text-red-400 text-sm text-center">Ошибка загрузки списка</p>';
+            }
+        }
+
+        function closeLoadProfilePanel() {
+            document.getElementById('load-profile-panel').style.display = 'none';
+        }
+
+        async function loadProfile(fileKey, name) {
+            if (!confirm('Загрузить профиль "' + name + '"?\nТекущие настройки будут заменены.')) return;
+            
+            try {
+                const resp = await fetch('/api/loadprofile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file: fileKey })
+                });
+                if (resp.ok) {
+                    closeLoadProfilePanel();
+                    alert('Профиль "' + name + '" загружен');
+                    syncData();
+                } else { alert('Ошибка загрузки профиля'); }
+            } catch(e) { alert('Ошибка: ' + e); }
+        }
     </script>
     
 </body>
