@@ -306,9 +306,9 @@ void AppNetwork::update() {
         // Предположим, что getSensorData есть (мы добавляли её ранее)
         const SensorData& sensors = processEngine->getSensorData(); 
 
-        // 1. Авария TSA (каждые 60 сек) - увеличено для предотвращения блокировки интерфейса
+        // 1. Авария TSA (каждые 30 сек)
         if (status.safety == SafetyState::WARNING_TSA || status.safety == SafetyState::EMERGENCY) {
-            if (now - lastAlarmTgTime > 60000) { // 60 секунд (было 10)
+            if (now - lastAlarmTgTime > 30000) { // 30 секунд
                 lastAlarmTgTime = now;
                 String msg = "🔥 АВАРИЯ! TSA: " + String(status.currentTsa, 1) + "C (Limit: " + String(configManager->getConfig().tsaLimit) + "C)";
                 sendMessage(msg);
@@ -809,7 +809,7 @@ bool AppNetwork::isTelegramReady() {
 bool AppNetwork::sendTelegramNow(const String& text) {
     if (!online || !bot) return false;
     
-    client.setTimeout(2000);  // Было 1 сек, нужно 2000 мс для стабильной отправки
+    client.setTimeout(2);  // 2 секунды (было 2000 - это 33 минуты!)
     Serial.println("[TG] Sending: " + text);
     
     if (server) server->handleClient();
