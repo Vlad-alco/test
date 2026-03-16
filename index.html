@@ -659,6 +659,7 @@
                 currentData.bodySpeed = newData.bodySpeed;
                 currentData.bodyCycle = newData.bodyCycle;
                 currentData.headsSpeed = newData.headsSpeed;
+                currentData.headsSpeedCalc = newData.headsSpeedCalc || 0;
                 currentData.rtsarM = newData.rtsarM;
                 currentData.adPressM = newData.adPressM;
                 currentData.headsTotalTarget = newData.headsTotalTarget || 0;
@@ -672,6 +673,8 @@
                 currentData.finishingRemain = newData.finishingRemain;
                 currentData.stageTimeSec = newData.stageTimeSec;
                 currentData.headsVolDone = newData.headsVolDone || 0;
+                currentData.headsVolSub = newData.headsVolSub || 0;      // Объём в текущем подэтапе
+                currentData.headsVolTarget = newData.headsVolTarget || 0; // Целевой объём подэтапа
                 
                 if (!currentData.cfg || !configDirty) currentData.cfg = newData.cfg;
                 
@@ -839,6 +842,8 @@
 
             // === ГОЛОВЫ ===
             const headSpeedEl = document.getElementById('mon-head-speed');
+            const headSpeedCalcEl = document.getElementById('mon-head-speed-calc');
+            const headSpeedRealEl = document.getElementById('mon-head-speed-real');
             const headMethodEl = document.getElementById('mon-head-method');
             const headSubstageEl = document.getElementById('mon-head-substage');
             const headVolEl = document.getElementById('mon-head-vol');
@@ -847,15 +852,21 @@
             const headTotalEl = document.getElementById('mon-head-total');
 
             if (stage == 'GOLOVY') {
-                headSpeedEl.textContent = (currentData.headsSpeed || 0) + " мл/ч";
+                // Скорости: расчётная / реальная
+                headSpeedEl.textContent = (currentData.headsSpeed || 0).toFixed(0) + " мл/ч";
+                if (headSpeedCalcEl) headSpeedCalcEl.textContent = (currentData.headsSpeedCalc || 0).toFixed(0);
+                if (headSpeedRealEl) headSpeedRealEl.textContent = (currentData.headsSpeed || 0).toFixed(0);
                 headMethodEl.textContent = cfg.headsTypeKSS ? "Kss" : "ST";
                 headSubstageEl.textContent = currentData.rectSubStage || "--";
-                headVolEl.textContent = Math.round(currentData.headsVolDone || 0);
-                headVolTargetEl.textContent = currentData.rectVolumeTarget || "--";
+                // Объём: фактически отобрано / целевой для подэтапа
+                headVolEl.textContent = (currentData.headsVolSub || 0).toFixed(1);
+                headVolTargetEl.textContent = currentData.headsVolTarget || "--";
                 headRemainEl.textContent = formatTime(currentData.rectTimeRemaining || 0);
                 headTotalEl.textContent = currentData.headsTotalTarget || "--";
             } else if (stage == 'GOLOVY_OK') {
                 headSpeedEl.textContent = "-- мл/ч";
+                if (headSpeedCalcEl) headSpeedCalcEl.textContent = "--";
+                if (headSpeedRealEl) headSpeedRealEl.textContent = "--";
                 headMethodEl.textContent = cfg.headsTypeKSS ? "KSS" : "ST";
                 headSubstageEl.textContent = "ГОТОВО";
                 headVolEl.textContent = Math.round(currentData.headsVolDone || 0);
@@ -864,6 +875,8 @@
                 headTotalEl.textContent = currentData.headsTotalTarget || Math.round(currentData.headsVolDone || 0);
             } else if (isRect && stage == 'TELO') {
                 headSpeedEl.textContent = "-- мл/ч";
+                if (headSpeedCalcEl) headSpeedCalcEl.textContent = "--";
+                if (headSpeedRealEl) headSpeedRealEl.textContent = "--";
                 headMethodEl.textContent = cfg.headsTypeKSS ? "KSS" : "ST";
                 headSubstageEl.textContent = "ОТБРАНО";
                 headVolEl.textContent = Math.round(currentData.headsVolDone || 0);
@@ -872,6 +885,8 @@
                 headTotalEl.textContent = currentData.headsTotalTarget || Math.round(currentData.headsVolDone || 0);
             } else {
                 headSpeedEl.textContent = "-- мл/ч";
+                if (headSpeedCalcEl) headSpeedCalcEl.textContent = "--";
+                if (headSpeedRealEl) headSpeedRealEl.textContent = "--";
                 headMethodEl.textContent = "--";
                 headSubstageEl.textContent = "--";
                 headVolEl.textContent = "--";

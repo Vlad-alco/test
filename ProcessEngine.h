@@ -142,7 +142,8 @@ private:
     float speedTelo = 0.0f;   // Скорость тела (мл/ч)
     
     // Накопленный объём голов и таймер расчёта
-    float headsVolDone = 0.0f;
+    float headsVolDone = 0.0f;    // Общий объём голов за все подэтапы
+    float headsVolSub = 0.0f;     // Объём голов в текущем подэтапе
     unsigned long lastVolCalcTime = 0;
     
     Stage currentStage = Stage::IDLE;

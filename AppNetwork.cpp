@@ -418,6 +418,8 @@ void AppNetwork::handleApiStatus() {
     // ===========================================================
     // === Накопленный объём голов и остаток таймера завершения ===
     json += "\"headsVolDone\":" + String(status.headsVolDone, 0) + ",";
+    json += "\"headsVolSub\":" + String(status.headsVolSub, 1) + ",";      // Объём в текущем подэтапе
+    json += "\"headsVolTarget\":" + String(status.headsVolTarget) + ",";   // Целевой объём подэтапа
     json += "\"finishingRemainSec\":" + String(status.finishingRemainSec) + ",";
     // ===========================================================
     // === Статусы выходов для блока СИСТЕМА ===

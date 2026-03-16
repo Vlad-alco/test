@@ -924,9 +924,11 @@ void ProcessEngine::handleGolovy() {
         }
     }
     headsVolDone += accumSpeed * dt_h;
+    headsVolSub += accumSpeed * dt_h;  // Также считаем объём для текущего подэтапа
 
     // Обновляем статус для веба
     currentStatus.headsVolDone = headsVolDone;
+    currentStatus.headsVolSub = headsVolSub;  // Добавлено: объём для подэтапа
     currentStatus.headsSpeed = accumSpeed;        // Реальная скорость по capacity клапана
     currentStatus.headsSpeedCalc = speedGolovy;   // Расчётная скорость для времени этапа
     currentStatus.bodySpeed = 0.0f;
@@ -1000,6 +1002,11 @@ void ProcessEngine::startStandardGolovy(SystemConfig& cfg) {
 
     currentGolovyStage = GolovyStage::ST_MAIN;
     stageStartTime = millis();
+    
+    // === СБРОС СЧЁТЧИКА ОБЪЁМА ПОДЭТАПА ===
+    headsVolSub = 0.0f;
+    currentStatus.headsVolTarget = (int)headVol;
+    // =====================================
 
     // === ЛОГИРОВАНИЕ ===
     logger.log("GOLOVY: Standard Start");
@@ -1055,6 +1062,11 @@ vHeadMin = headVol / cap;
     golovyTargetTime = (unsigned long)(vHeadMin * 60.0f); 
     currentGolovyStage = GolovyStage::KSS_SPIT;
     stageStartTime = millis();
+    
+    // === СБРОС СЧЁТЧИКА ОБЪЁМА ПОДЭТАПА ===
+    headsVolSub = 0.0f;
+    currentStatus.headsVolTarget = (int)headVol;
+    // =====================================
 
     Serial.print("[GOLOVY] KSS Spit. Time: "); Serial.print(vHeadMin); Serial.println(" min");
     Serial.print("[GOLOVY] KSS Spit. Speed: "); Serial.print(cap, 1); Serial.println(" ml/min (full flow)");
@@ -1081,6 +1093,11 @@ void ProcessEngine::startKssStandard(SystemConfig& cfg) {
     
     currentGolovyStage = GolovyStage::KSS_STANDARD;
     stageStartTime = millis();
+    
+    // === СБРОС СЧЁТЧИКА ОБЪЁМА ПОДЭТАПА ===
+    headsVolSub = 0.0f;
+    currentStatus.headsVolTarget = (int)headVol;
+    // =====================================
 
     Serial.print("[GOLOVY] KSS Standard. Time: "); Serial.print(vHeadMin); Serial.println(" min");
     Serial.print("[GOLOVY] KSS Standard. Speed: "); Serial.print(speedGolovy, 1); Serial.println(" ml/h");
@@ -1117,6 +1134,11 @@ void ProcessEngine::startKssAkaTelo(SystemConfig& cfg) {
     
     currentGolovyStage = GolovyStage::KSS_AKATELO;
     stageStartTime = millis();
+    
+    // === СБРОС СЧЁТЧИКА ОБЪЁМА ПОДЭТАПА ===
+    headsVolSub = 0.0f;
+    currentStatus.headsVolTarget = (int)headVol;
+    // =====================================
 
     Serial.print("[GOLOVY] KSS AkaTelo. Time: "); Serial.print(vHeadMin); Serial.println(" min");
     Serial.print("[GOLOVY] KSS AkaTelo. Speed: "); Serial.print(speedTelo, 1); Serial.println(" ml/h");
