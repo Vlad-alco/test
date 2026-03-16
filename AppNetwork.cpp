@@ -809,7 +809,7 @@ bool AppNetwork::isTelegramReady() {
 bool AppNetwork::sendTelegramNow(const String& text) {
     if (!online || !bot) return false;
     
-    client.setTimeout(1);
+    client.setTimeout(2000);  // Было 1 сек, нужно 2000 мс для стабильной отправки
     Serial.println("[TG] Sending: " + text);
     
     if (server) server->handleClient();
