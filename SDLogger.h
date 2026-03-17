@@ -47,48 +47,44 @@ public:
     }
 
     void log(const String &message) {
-        // === БЕЗОПАСНАЯ ПРОВЕРКА SD ===
-        // Если SD ещё не проверяли - проверяем один раз
-        if (!sdChecked) {
-            // Первичная проверка - без мьютекса, т.к. вызывается только из Core 1
-            sdAvailable = (SD.cardSize() > 0);
-            sdChecked = true;
-        }
-        
-        if (!sdAvailable) {
-            // SD недоступна - выводим только в Serial
-            Serial.println("[NO SD] " + message);
-            return;
-        }
-
-        // === ОПТИМИЗАЦИЯ: Проверка размера ===
-        // Проверяем, превысил ли *отслеживаемый* размер лимит.
-        // Это быстрее, чем открывать файл и вызывать .size() каждый раз.
-        if (currentFileSize > MAX_LOG_SIZE) {
-            rotateLogs();
-            currentFileSize = 0; // Сбрасываем счетчик после ротации
-        }
-        // =====================================
-
-        // Формируем строку (это быстро, мьютекс не нужен)
+        // Формируем строку (быстро, мьютекс не нужен)
         String timeStr = getTimeStr();
         String logLine = "[" + timeStr + "] " + message;
 
-        // === КРИТИЧЕСКАЯ СЕКЦИЯ: работа с SD ===
+        // === КРИТИЧЕСКАЯ СЕКЦИЯ: ЛЮБАЯ работа с SD только под sdMutex ===
+        // Важно: logger.log() может вызываться с разных ядер (Core 0/1),
+        // поэтому проверка SD, ротация и запись должны быть синхронизированы.
+        bool wroteToSd = false;
         {
             SDScopeLock lock;  // Захват мьютекса (автоматически)
-            
-            // Пишем на SD карту
-            File file = SD.open("/system.log", FILE_APPEND);
-            if (file) {
-                file.println(logLine);
-                // Обновляем счетчик размера (длина строки + 2 байта на \r\n)
-                currentFileSize += logLine.length() + 2; 
-                file.close();
+
+            // Одноразовая проверка доступности SD (под мьютексом!)
+            if (!sdChecked) {
+                sdAvailable = (SD.cardSize() > 0);
+                sdChecked = true;
             }
-            // При выходе из блока lock уничтожается -> мьютекс освобождается
+
+            if (sdAvailable) {
+                // Ротация логов тоже под мьютексом.
+                if (currentFileSize > MAX_LOG_SIZE) {
+                    rotateLogsLocked();
+                    currentFileSize = 0;
+                }
+
+                File file = SD.open("/system.log", FILE_APPEND);
+                if (file) {
+                    file.println(logLine);
+                    currentFileSize += logLine.length() + 2; // + \r\n
+                    file.close();
+                    wroteToSd = true;
+                }
+            }
         }
-        // ======================================
+        // ============================================================
+
+        if (!wroteToSd) {
+            Serial.println("[NO SD] " + message);
+        }
 
         // Выводим в Serial (не требует мьютекса)
         Serial.println(logLine);
@@ -98,11 +94,16 @@ public:
     void log(const String &label, float value) { log(label + String(value, 2)); }
 
     String readLastLog() {
-        if (!sdAvailable) return "SD Error";
-        
         // === КРИТИЧЕСКАЯ СЕКЦИЯ: чтение с SD ===
+        // readLastLog() может вызываться из Web (Core 0), поэтому синхронизация обязательна.
         SDScopeLock lock;  // Захват мьютекса
-        
+
+        if (!sdChecked) {
+            sdAvailable = (SD.cardSize() > 0);
+            sdChecked = true;
+        }
+        if (!sdAvailable) return "SD Error";
+
         File file = SD.open("/system.log");
         if (!file) return "Log file not found";
         
@@ -149,10 +150,8 @@ private:
         }
     }
 
-    void rotateLogs() {
-        // === КРИТИЧЕСКАЯ СЕКЦИЯ: ротация логов ===
-        // Вызывается из log(), который уже держит мьютекс
-        // Поэтому здесь мьютекс НЕ захватываем повторно!
+    void rotateLogsLocked() {
+        // ВАЖНО: вызывать ТОЛЬКО когда sdMutex уже удерживается.
         
         Serial.println("[Logger] Rotating logs...");
         // Удаляем самый старый
