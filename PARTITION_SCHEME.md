@@ -279,35 +279,81 @@ Tools → Partition Scheme → "8M with 3MB SPIFFS (OTA)"
 
 ### Решение 5: Кастомная Partition Table
 
-Если стандартные схемы не подходят — создать свою:
+Если стандартные схемы не подходят — создать свою.
 
-1. Создать файл `partitions.csv`:
+#### Для ESP32-S3 N16R8 (16MB Flash + 8MB PSRAM)
+
+Файл `partitions_16mb.csv` уже создан в репозитории:
+
+```csv
+# Partition Table for ESP32-S3 N16R8 (16MB Flash + 8MB PSRAM)
+# Name,     Type, SubType, Offset,   Size,     Flags
+nvs,        data, nvs,     0x9000,   0x6000,
+otadata,    data, ota,     0xf000,   0x2000,
+app0,       app,  ota_0,   0x11000,  0x300000,
+spiffs,     data, spiffs,  0x311000, 0xCE7000,
+```
+
+**Размеры разделов:**
+
+| Раздел | Размер | Назначение |
+|--------|--------|------------|
+| nvs | 24 KB | WiFi, Preferences |
+| otadata | 8 KB | OTA данные |
+| app0 | 3 MB | Скетч BuhloWar |
+| spiffs | 12.8 MB | LittleFS — Web-файлы |
+
+#### Установка в Arduino IDE
+
+1. **Скопировать файл** `partitions_16mb.csv` в папку скетча:
+   ```
+   C:\Users\<User>\Documents\Arduino\BuhloWar110326CL2core\
+   ```
+
+2. **Настроить Arduino IDE:**
+   ```
+   Tools → Board: "ESP32S3 Dev Module"
+   Tools → Flash Size: "16MB (128Mbit)"
+   Tools → Partition Scheme: "Custom partitions_16mb.csv"
+   Tools → PSRAM: "OPI PSRAM"
+   ```
+
+3. **Если "Custom..." нет в списке:**
+   
+   Вариант A — через boards.txt:
+   - Найти файл `boards.txt` (обычно в `%LOCALAPPDATA%\Arduino15\packages\esp32\hardware\esp32\<version>\`)
+   - Добавить свою секцию или использовать существующий шаблон
+
+   Вариант B — через menu.csv (для продвинутых):
+   - Создать файл `menu.csv` рядом с `boards.txt`
+
+   Вариант C — использовать PlatformIO (проще для кастомных partition)
+
+#### Для других конфигураций
+
+Шаблон для 8MB Flash:
 ```csv
 # Name,   Type, SubType, Offset,  Size, Flags
 nvs,      data, nvs,     0x9000,  0x5000,
 otadata,  data, ota,     0xe000,  0x2000,
-app0,     app,  ota_0,   0x10000, 0x380000,
-app1,     app,  ota_1,   0x390000,0x380000,
-spiffs,   data, spiffs,  0x710000,0xF0000,
+app0,     app,  ota_0,   0x10000, 0x300000,
+spiffs,   data, spiffs,  0x310000,0x4F0000,
 ```
 
-2. В Arduino IDE:
-```
-Tools → Partition Scheme → "Custom partitions.csv"
-```
-
-3. Указать путь к файлу в настройках платы.
+Здесь:
+- app0: 3 MB под скетч
+- spiffs: ~5 MB под LittleFS
 
 ---
 
 ## 8. Таблица совместимости
 
-| Partition Scheme | App размер | SPIFFS | Рекомендация |
-|------------------|------------|--------|--------------|
-| "Default 4MB" | 1.2 MB | 1.5 MB | Не подходит (8MB flash) |
-| "8M with 1MB SPIFFS" | ~5 MB | 1 MB | Мало для Web + логи |
-| "8M with 2MB SPIFFS" | ~4 MB | 2 MB | Минимум для WebSync |
-| "8M with 3MB SPIFFS" | ~3 MB | 3 MB | **Рекомендуется** |
+| Flash | Partition Scheme | App размер | SPIFFS | Рекомендация |
+|-------|------------------|------------|--------|--------------|
+| 4 MB | "Default 4MB" | 1.2 MB | 1.5 MB | Мало для BuhloWar |
+| 8 MB | "8M with 1MB SPIFFS" | ~5 MB | 1 MB | Минимум |
+| 8 MB | "8M with 3MB SPIFFS" | ~3 MB | 3 MB | Рекомендуется |
+| 16 MB | "Custom partitions_16mb.csv" | 3 MB | 12.8 MB | **N16R8 — идеально!** |
 
 ---
 
