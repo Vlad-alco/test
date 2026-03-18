@@ -3,9 +3,12 @@
 // Список Web-файлов для синхронизации
 const char* WebSync::WEB_FILES[] = {
     "index.html",
-    "help.html"
+    "help.html",
+    "js/chart.umd.js",
+    "js/lucide.js",
+    "js/tailwindcss.js"
 };
-const int WebSync::WEB_FILES_COUNT = 2;
+const int WebSync::WEB_FILES_COUNT = 5;
 
 bool WebSync::begin() {
     Serial.println("[WebSync] ========================================");
@@ -191,6 +194,16 @@ bool WebSync::copyFileToLittleFS(const char* filename) {
     if (!SD.exists(sdPath)) {
         Serial.printf("[WebSync] File not found on SD: %s\n", sdPath.c_str());
         return false;
+    }
+    
+    // Если файл в подпапке (например js/file.js) — создаём папку
+    int slashPos = fsPath.indexOf('/', 1);  // Ищем второй слеш
+    if (slashPos > 0) {
+        String dirPath = fsPath.substring(0, slashPos);  // "/js"
+        if (!LittleFS.exists(dirPath)) {
+            LittleFS.mkdir(dirPath);
+            Serial.printf("[WebSync] Created directory: %s\n", dirPath.c_str());
+        }
     }
     
     // Открываем исходный файл на SD

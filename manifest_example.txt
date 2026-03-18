@@ -2,11 +2,14 @@
 # Format: filename=YYYYMMDDHHMM
 # 
 # При обновлении Web-интерфейса:
-# 1. Скопировать новые index.html и help.html в /www/
+# 1. Скопировать файлы в /www/ (index.html, help.html, js/*.js)
 # 2. Обновить даты в этом файле
 # 3. Перезагрузить ESP32
 #
 # Система автоматически скопирует файлы в LittleFS если дата новее
 
-index.html=202503181430
+index.html=202503181500
 help.html=202503151200
+js/chart.umd.js=202503151200
+js/lucide.js=202503151200
+js/tailwindcss.js=202503151200
