@@ -618,11 +618,26 @@
         const ANIM_COLLAPSE_MS = 600;  
         const ANIM_RING_DELAY  = 150;  
 
+        let syncInProgress = false;  // Защита от параллельных запросов
+        
         document.addEventListener('DOMContentLoaded', () => { syncData(); setInterval(syncData, SYNC_INTERVAL); });
 
         async function syncData() {
+            // Защита от накопления запросов
+            if (syncInProgress) {
+                console.log('[Web] Sync skipped - previous request in progress');
+                return;
+            }
+            syncInProgress = true;
+            
             try {
-                const response = await fetch(API_STATUS);
+                // Таймаут 3 секунды - если ESP32 не отвечает, не блокируем браузер
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                
+                const response = await fetch(API_STATUS, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
                 if (!response.ok) throw new Error('Network error');
                 const newData = await response.json();
                 
@@ -681,9 +696,11 @@
                 currentData.testAwaitingType = newData.testAwaitingType;
 
                 updateUI();
+                syncInProgress = false;  // Разблокируем следующий запрос
                 
             } catch (error) {
                 console.error('Sync failed:', error);
+                syncInProgress = false;  // Разблокируем даже при ошибке
                 const el = document.getElementById('esp32-status');
                 if(el) { el.classList.remove('bg-green-500'); el.classList.add('bg-red-500'); }
             }
