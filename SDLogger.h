@@ -24,13 +24,18 @@ extern SemaphoreHandle_t sdMutex;
 // При уничтожении (выход из области видимости) - освобождает
 class SDScopeLock {
 public:
+    bool locked = false;  // Удалось ли захватить мьютекс
+    
     SDScopeLock() {
         if (sdMutex) {
-            xSemaphoreTake(sdMutex, portMAX_DELAY);
+            // Таймаут 100мс - если SD занята, не блокируем систему
+            locked = (xSemaphoreTake(sdMutex, pdMS_TO_TICKS(100)) == pdTRUE);
+        } else {
+            locked = true;  // Если мьютекса нет, считаем что "захватили"
         }
     }
     ~SDScopeLock() {
-        if (sdMutex) {
+        if (sdMutex && locked) {
             xSemaphoreGive(sdMutex);
         }
     }
@@ -56,7 +61,15 @@ public:
         // поэтому проверка SD, ротация и запись должны быть синхронизированы.
         bool wroteToSd = false;
         {
-            SDScopeLock lock;  // Захват мьютекса (автоматически)
+            SDScopeLock lock;  // Захват мьютекса (автоматически, с таймаутом!)
+            
+            // Проверяем удалось ли захватить мьютекс
+            if (!lock.locked) {
+                // SD занята - пропускаем запись, не блокируем систему
+                Serial.println("[SD BUSY] " + message);
+                Serial.println(logLine);
+                return;
+            }
 
             // Одноразовая проверка доступности SD (под мьютексом!)
             if (!sdChecked) {
@@ -96,7 +109,12 @@ public:
     String readLastLog() {
         // === КРИТИЧЕСКАЯ СЕКЦИЯ: чтение с SD ===
         // readLastLog() может вызываться из Web (Core 0), поэтому синхронизация обязательна.
-        SDScopeLock lock;  // Захват мьютекса
+        SDScopeLock lock;  // Захват мьютекса (с таймаутом!)
+        
+        // Проверяем удалось ли захватить мьютекс
+        if (!lock.locked) {
+            return "[SD BUSY] Try again later";
+        }
 
         if (!sdChecked) {
             sdAvailable = (SD.cardSize() > 0);

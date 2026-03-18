@@ -86,10 +86,14 @@ void AppNetwork::begin(int checkIntervalMinutes) {
             server->send(200, "text/plain", logContent);
         });
 
-        // Главная страница - чтение с SD карты (защищено мьютексом)
+        // Главная страница - чтение с SD карты (защищено мьютексом с таймаутом)
         server->on("/", HTTP_GET, [this]() {
             // === КРИТИЧЕСКАЯ СЕКЦИЯ: чтение с SD ===
-            if (sdMutex) xSemaphoreTake(sdMutex, portMAX_DELAY);
+            // Таймаут 100мс - если SD занята, возвращаем 503
+            if (sdMutex && xSemaphoreTake(sdMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+                server->send(503, "text/plain", "SD busy, try again");
+                return;
+            }
             
             File file = SD.open("/www/index.html", "r");
             if (file) {
@@ -132,8 +136,11 @@ void AppNetwork::begin(int checkIntervalMinutes) {
             else if (uri.endsWith(".ico")) contentType = "image/x-icon";
             else if (uri.endsWith(".txt")) contentType = "text/plain";
 
-            // SD доступ только под мьютексом
-            if (sdMutex) xSemaphoreTake(sdMutex, portMAX_DELAY);
+            // SD доступ только под мьютексом с таймаутом
+            if (sdMutex && xSemaphoreTake(sdMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+                server->send(503, "text/plain", "SD busy, try again");
+                return;
+            }
             File file = SD.open(uri, "r");
             if (!file) {
                 if (sdMutex) xSemaphoreGive(sdMutex);
@@ -230,10 +237,14 @@ bool AppNetwork::startAPMode() {
         server->send(200, "text/plain", logContent);
     });
 
-    // Главная страница - чтение с SD карты (защищено мьютексом)
+    // Главная страница - чтение с SD карты (защищено мьютексом с таймаутом)
     server->on("/", HTTP_GET, [this]() {
         // === КРИТИЧЕСКАЯ СЕКЦИЯ: чтение с SD ===
-        if (sdMutex) xSemaphoreTake(sdMutex, portMAX_DELAY);
+        // Таймаут 100мс - если SD занята, возвращаем 503
+        if (sdMutex && xSemaphoreTake(sdMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+            server->send(503, "text/plain", "SD busy, try again");
+            return;
+        }
         
         File file = SD.open("/www/index.html", "r");
         if (file) {
@@ -273,7 +284,10 @@ bool AppNetwork::startAPMode() {
         else if (uri.endsWith(".ico")) contentType = "image/x-icon";
         else if (uri.endsWith(".txt")) contentType = "text/plain";
 
-        if (sdMutex) xSemaphoreTake(sdMutex, portMAX_DELAY);
+        if (sdMutex && xSemaphoreTake(sdMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+            server->send(503, "text/plain", "SD busy, try again");
+            return;
+        }
         File file = SD.open(uri, "r");
         if (!file) {
             if (sdMutex) xSemaphoreGive(sdMutex);
