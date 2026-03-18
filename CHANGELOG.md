@@ -4,6 +4,100 @@
 
 ---
 
+## [2025-03-18] — Сессия 20
+
+### Проблема
+Web интерфейс зависает при аварии TSA. Предыдущие решения (мьютекс SD) не решили проблему полностью.
+
+### Корневая причина
+**Конфликт SPI шины:**
+- SD карта использует SPI для связи с ESP32
+- Core 1 (loop) пишет логи на SD → занимает SPI
+- Core 0 (Network Task) читает Web-файлы с SD → ждёт SPI
+- Если Core 1 пишет логи часто (авария!) → Web блокируется
+
+### Решение: LittleFS для Web-файлов
+**Web-файлы перенесены во внутреннюю flash ESP32 (LittleFS):**
+
+```
+Раньше:
+SD карта → SPI шина → конфликт между ядрами
+
+Теперь:
+LittleFS (внутренняя flash) → НЕ использует SPI → нет конфликта!
+SD карта → только для логов (Core 1)
+```
+
+### Как это работает
+
+1. **При старте системы:**
+   - Инициализация SD (уже было)
+   - Инициализация LittleFS (НОВОЕ)
+   - Проверка manifest.txt на SD
+   - Если файлы на SD новее → копирование в LittleFS
+
+2. **При работе:**
+   - WebServer отдаёт файлы из LittleFS
+   - SD используется только для логов
+   - Нет обращения к SD из Core 0 = нет конфликта
+
+### manifest.txt (на SD: /www/manifest.txt)
+
+```
+# Web files version manifest
+# Format: filename=YYYYMMDDHHMM
+index.html=202503181430
+help.html=202503151200
+```
+
+При обновлении Web-интерфейса:
+1. Обновить файлы на SD
+2. Обновить даты в manifest.txt
+3. Перезагрузить ESP32 → автоматическое копирование
+
+### Архитектура после изменений
+
+```
+Core 0 (Network Task):         Core 1 (loop):
+- WebServer → LittleFS         - Процесс
+- Telegram                     - Датчики  
+- DNS Server                   - LCD/Кнопки
+                               - SD логи
+LittleFS (внутр. flash)        SD карта (SPI)
+     ↑                              ↑
+  БЕЗ SPI                       SPI занят
+  БЕЗ конфликта                 только логами
+```
+
+### Важно: Partition Scheme
+
+Для LittleFS нужно выбрать в Arduino IDE:
+**Tools → Partition Scheme → "8M with 3MB SPIFFS"** (или аналогичный с LittleFS)
+
+### Изменённые файлы
+
+- **WebSync.h** (НОВЫЙ) — класс синхронизации SD→LittleFS
+- **WebSync.cpp** (НОВЫЙ) — реализация:
+  - `begin()` — инициализация LittleFS
+  - `syncFiles()` — синхронизация по manifest
+  - `openFile()` — открытие файла из LittleFS
+  - `hasFile()` — проверка наличия файла
+
+- **BuhloWar...ino** — добавлен вызов `WebSync::begin()` при старте
+
+- **AppNetwork.cpp** — WebServer отдаёт файлы из LittleFS:
+  - Убран `sdMutex` из обработчиков Web
+  - `WebSync::openFile()` вместо `SD.open()`
+  - Работает в STA и AP режимах
+
+### Что НЕ изменилось
+
+- ProcessEngine — логика процессов без изменений
+- SDLogger — логи на SD без изменений
+- Датчики, меню, LCD — без изменений
+
+---
+
 ## [2025-03-16] — Сессия 18
 
 ### Задача

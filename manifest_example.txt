@@ -1,0 +1,12 @@
+# Web files version manifest
+# Format: filename=YYYYMMDDHHMM
+# 
+# При обновлении Web-интерфейса:
+# 1. Скопировать новые index.html и help.html в /www/
+# 2. Обновить даты в этом файле
+# 3. Перезагрузить ESP32
+#
+# Система автоматически скопирует файлы в LittleFS если дата новее
+
+index.html=202503181430
+help.html=202503151200

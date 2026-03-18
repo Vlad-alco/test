@@ -4,6 +4,7 @@
 #include "ProcessEngine.h" 
 #include "preferences.h"
 #include "SDLogger.h" // <--- Добавить эту строку
+#include "WebSync.h"  // <--- WebSync для отдачи файлов из LittleFS
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
@@ -86,25 +87,20 @@ void AppNetwork::begin(int checkIntervalMinutes) {
             server->send(200, "text/plain", logContent);
         });
 
-        // Главная страница - чтение с SD карты (защищено мьютексом)
+        // Главная страница - отдаётся из LittleFS (без SD, без мьютекса!)
+        // WebSync::begin() уже скопировал файлы с SD при старте
         server->on("/", HTTP_GET, [this]() {
-            // === КРИТИЧЕСКАЯ СЕКЦИЯ: чтение с SD ===
-            if (sdMutex) xSemaphoreTake(sdMutex, portMAX_DELAY);
-            
-            File file = SD.open("/www/index.html", "r");
+            File file = WebSync::openFile("index.html");
             if (file) {
                 server->streamFile(file, "text/html");
                 file.close();
             } else {
                 server->send(404, "text/plain", "File Not Found: index.html");
             }
-            
-            if (sdMutex) xSemaphoreGive(sdMutex);
-            // ========================================
         });
 
-        // Статика (JS, CSS, и т.п.) — НЕЛЬЗЯ serveStatic(), потому что он не позволяет
-        // синхронизировать доступ к SD между ядрами. Отдаем файлы вручную под sdMutex.
+        // Статика (JS, CSS, help.html) — отдаётся из LittleFS
+        // БЕЗ обращения к SD = БЕЗ sdMutex = БЕЗ зависаний при аварии!
         server->onNotFound([this]() {
             if (!server) return;
 
@@ -114,10 +110,14 @@ void AppNetwork::begin(int checkIntervalMinutes) {
                 return;
             }
 
-            // Нормализация пути
-            if (!uri.startsWith("/")) uri = "/" + uri;
-            if (uri == "/") uri = "/www/index.html"; // на всякий случай
-            else if (!uri.startsWith("/www/")) uri = "/www" + uri;
+            // Нормализация пути: убираем ведущий /
+            if (uri.startsWith("/")) uri = uri.substring(1);
+            
+            // index.html уже обработан выше
+            if (uri == "" || uri == "index.html") {
+                server->send(302, "text/plain", "Redirect to /");
+                return;
+            }
 
             // Определяем тип контента
             String contentType = "application/octet-stream";
@@ -132,17 +132,14 @@ void AppNetwork::begin(int checkIntervalMinutes) {
             else if (uri.endsWith(".ico")) contentType = "image/x-icon";
             else if (uri.endsWith(".txt")) contentType = "text/plain";
 
-            // SD доступ только под мьютексом
-            if (sdMutex) xSemaphoreTake(sdMutex, portMAX_DELAY);
-            File file = SD.open(uri, "r");
+            // Открываем из LittleFS (WebSync)
+            File file = WebSync::openFile(uri.c_str());
             if (!file) {
-                if (sdMutex) xSemaphoreGive(sdMutex);
-                server->send(404, "text/plain", "Not Found");
+                server->send(404, "text/plain", "Not Found: " + uri);
                 return;
             }
             server->streamFile(file, contentType);
             file.close();
-            if (sdMutex) xSemaphoreGive(sdMutex);
         });
         
         server->begin();
@@ -230,24 +227,20 @@ bool AppNetwork::startAPMode() {
         server->send(200, "text/plain", logContent);
     });
 
-    // Главная страница - чтение с SD карты (защищено мьютексом)
+    // Главная страница - отдаётся из LittleFS (без SD, без мьютекса!)
+    // WebSync::begin() уже скопировал файлы с SD при старте
     server->on("/", HTTP_GET, [this]() {
-        // === КРИТИЧЕСКАЯ СЕКЦИЯ: чтение с SD ===
-        if (sdMutex) xSemaphoreTake(sdMutex, portMAX_DELAY);
-        
-        File file = SD.open("/www/index.html", "r");
+        File file = WebSync::openFile("index.html");
         if (file) {
             server->streamFile(file, "text/html");
             file.close();
         } else {
             server->send(404, "text/plain", "File Not Found: index.html");
         }
-        
-        if (sdMutex) xSemaphoreGive(sdMutex);
-        // ========================================
     });
 
-    // Статика — отдаем вручную под sdMutex (см. begin()).
+    // Статика (JS, CSS, help.html) — отдаётся из LittleFS
+    // БЕЗ обращения к SD = БЕЗ sdMutex = БЕЗ зависаний при аварии!
     server->onNotFound([this]() {
         if (!server) return;
 
@@ -257,10 +250,16 @@ bool AppNetwork::startAPMode() {
             return;
         }
 
-        if (!uri.startsWith("/")) uri = "/" + uri;
-        if (uri == "/") uri = "/www/index.html";
-        else if (!uri.startsWith("/www/")) uri = "/www" + uri;
+        // Нормализация пути: убираем ведущий /
+        if (uri.startsWith("/")) uri = uri.substring(1);
+        
+        // index.html уже обработан выше
+        if (uri == "" || uri == "index.html") {
+            server->send(302, "text/plain", "Redirect to /");
+            return;
+        }
 
+        // Определяем тип контента
         String contentType = "application/octet-stream";
         if (uri.endsWith(".html")) contentType = "text/html";
         else if (uri.endsWith(".css")) contentType = "text/css";
@@ -273,16 +272,14 @@ bool AppNetwork::startAPMode() {
         else if (uri.endsWith(".ico")) contentType = "image/x-icon";
         else if (uri.endsWith(".txt")) contentType = "text/plain";
 
-        if (sdMutex) xSemaphoreTake(sdMutex, portMAX_DELAY);
-        File file = SD.open(uri, "r");
+        // Открываем из LittleFS (WebSync)
+        File file = WebSync::openFile(uri.c_str());
         if (!file) {
-            if (sdMutex) xSemaphoreGive(sdMutex);
-            server->send(404, "text/plain", "Not Found");
+            server->send(404, "text/plain", "Not Found: " + uri);
             return;
         }
         server->streamFile(file, contentType);
         file.close();
-        if (sdMutex) xSemaphoreGive(sdMutex);
     });
     
     server->begin();

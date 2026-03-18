@@ -16,6 +16,7 @@
 #include "ProcessEngine.h"
 #include "OutputManager.h"
 #include "SDLogger.h"
+#include "WebSync.h"
 #include <RTClib.h>
 #include <esp_system.h> // Для получения причины сброса
 #include <freertos/semphr.h> // Для мьютекса SD карты
@@ -167,6 +168,13 @@ void setup() {
   // === ИНИЦИАЛИЗАЦИЯ ЛОГЕРА ===
   logger.init();
   logger.log("System Boot Start");
+  
+  // === СИНХРОНИЗАЦИЯ WEB-ФАЙЛОВ (SD → LittleFS) ===
+  // Делаем ДО appNetwork.begin(), чтобы WebServer отдавал из LittleFS
+  // Это решает проблему зависания Web при аварии (нет конфликта SPI)
+  WebSync::begin();
+  // ================================================
+  
   // 3. Инициализация сети (WEB и WiFi)
   SystemConfig cfg = configManager.getConfig();
   lcd.clear();
